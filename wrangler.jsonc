@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "acg-pacong",
+  "name": "acgyx",
   "compatibility_date": "2026-06-17",
   "main": "src/index.js",
   "assets": {
