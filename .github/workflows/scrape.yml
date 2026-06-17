@@ -45,13 +45,13 @@ jobs:
         working-directory: 电脑版
         run: |
           python scraper.py --pages 3 --delay 0.6 --out ../data/acgyx_latest.json
-          python scraper.py --pages 3 --delay 0.6 --out ../单html版本/data/acgyx_latest.json
+          python scraper.py --pages 3 --delay 0.6 --out ../dist/data/acgyx_latest.json
 
       - name: 提交并推送
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/acgyx_latest.json 单html版本/data/acgyx_latest.json
+          git add data/acgyx_latest.json dist/data/acgyx_latest.json
           if git diff --staged --quiet; then
             echo "无更新,无需提交"
           else
