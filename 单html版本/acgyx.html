@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ACG游戏姬 - 单 HTML 版(云端数据)</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --card: #1a1d27;
+    --border: #2a2d3a;
+    --text: #e0e0e0;
+    --muted: #888;
+    --accent: #6c63ff;
+    --accent2: #ff6b6b;
+    --green: #51cf66;
+    --yellow: #fcc419;
+    --red: #ff5252;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { background: var(--bg); color: var(--text);
+    font-family: "Microsoft YaHei", "PingFang SC", -apple-system, sans-serif;
+    min-height: 100vh; }
+  body { padding: 14px; padding-bottom: 80px; font-size: 14px; }
+  .container { max-width: 960px; margin: 0 auto; }
+  h1 { text-align: center; font-size: 1.3rem; margin-bottom: 4px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .subtitle { text-align: center; color: var(--muted); font-size: 0.75rem; margin-bottom: 14px; }
+
+  /* 最新提示条 */
+  .latest-bar { background: linear-gradient(135deg, rgba(108,99,255,0.18), rgba(255,107,107,0.18));
+    border: 1px solid var(--accent); border-radius: 8px; padding: 10px 12px;
+    margin-bottom: 12px; font-size: 0.82rem; line-height: 1.5; }
+  .latest-bar b { color: var(--accent); }
+  .latest-bar .small { color: var(--muted); font-size: 0.7rem; }
+
+  .panel { background: var(--card); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px; margin-bottom: 12px; }
+  .panel-title { font-size: 0.8rem; font-weight: bold; margin-bottom: 10px;
+    color: var(--accent); border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
+  .row:last-child { margin-bottom: 0; }
+  label { font-size: 0.75rem; color: var(--muted); min-width: 56px; }
+  input, select, textarea { background: #0f1117; border: 1px solid var(--border);
+    border-radius: 6px; padding: 6px 10px; color: var(--text); font-size: 0.8rem;
+    font-family: inherit; outline: none; }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+  input[type="number"] { width: 70px; }
+  input[type="text"] { flex: 1; min-width: 100px; }
+  textarea { width: 100%; min-height: 90px; font-family: monospace; font-size: 0.75rem; resize: vertical; }
+  button { background: var(--accent); color: #fff; border: 0;
+    border-radius: 6px; padding: 7px 14px; font-size: 0.8rem; cursor: pointer;
+    font-weight: bold; transition: 0.15s; }
+  button:hover { opacity: 0.85; }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  button.green { background: var(--green); }
+  button.yellow { background: var(--yellow); color: #222; }
+  button.red { background: var(--red); }
+  button.ghost { background: transparent; border: 1px solid var(--border); color: var(--text); }
+
+  /* 顶部 Tab(数据源) */
+  .source-tabs { display: flex; gap: 4px; margin-bottom: 10px; }
+  .source-tabs button { flex: 1; background: transparent; color: var(--muted);
+    border: 1px solid var(--border); border-radius: 6px 6px 0 0; border-bottom: 0; }
+  .source-tabs button.active { background: var(--card); color: var(--accent); }
+
+  /* 模式 Tab(筛选) */
+  .mode-tabs { display: flex; gap: 4px; margin-bottom: 10px; flex-wrap: wrap; }
+  .mode-tabs button { flex: 1; background: transparent; color: var(--muted);
+    border: 1px solid var(--border); border-radius: 6px; min-width: 80px; }
+  .mode-tabs button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  .hidden { display: none !important; }
+
+  .status { font-size: 0.75rem; padding: 6px 10px; border-radius: 4px;
+    background: #0f1117; color: var(--muted); min-height: 28px; line-height: 1.5;
+    white-space: pre-wrap; word-break: break-all; }
+  .status.ok { color: var(--green); }
+  .status.err { color: var(--red); }
+  .status.warn { color: var(--yellow); }
+
+  .log { font-size: 0.7rem; color: var(--muted); max-height: 140px; overflow-y: auto;
+    background: #0a0c12; border: 1px solid var(--border); border-radius: 4px;
+    padding: 6px 8px; margin-top: 8px; font-family: monospace; }
+  .log div { line-height: 1.4; }
+
+  .results { background: var(--card); border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px; max-height: 50vh; overflow-y: auto; }
+  .results table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+  .results th { text-align: left; color: var(--muted); font-weight: normal;
+    font-size: 0.7rem; padding: 4px 6px; border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; background: var(--card); }
+  .results td { padding: 6px; border-bottom: 1px solid var(--border);
+    vertical-align: top; word-break: break-all; }
+  .results tr:hover td { background: rgba(108,99,255,0.05); }
+  .badge { display: inline-block; padding: 1px 6px; border-radius: 3px;
+    font-size: 0.65rem; font-weight: bold; }
+  .badge.PC { background: #6c63ff33; color: var(--accent); }
+  .badge.AZ { background: #ff6b6b33; color: var(--accent2); }
+  .badge.OTHER { background: #88888833; color: var(--muted); }
+  details { margin-top: 8px; }
+  details summary { cursor: pointer; color: var(--accent); font-size: 0.75rem; }
+
+  .progress { height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; margin-top: 6px; }
+  .progress > div { height: 100%; background: var(--accent); width: 0%; transition: width 0.2s; }
+  .help { font-size: 0.7rem; color: var(--muted); margin-top: 4px; line-height: 1.5; }
+  code { background: #0a0c12; padding: 1px 4px; border-radius: 3px;
+    font-size: 0.7rem; color: var(--yellow); }
+
+  .pager { display: flex; gap: 6px; align-items: center; margin-top: 8px; }
+  .pager button { padding: 5px 10px; font-size: 0.75rem; }
+  .pager .pg-info { color: var(--muted); font-size: 0.75rem; flex: 1; text-align: center; }
+
+  @media (max-width: 600px) {
+    body { padding: 10px; padding-bottom: 100px; font-size: 13px; }
+    .panel { padding: 10px; }
+    .row { gap: 6px; }
+    label { min-width: 48px; font-size: 0.7rem; }
+    input, select, button { font-size: 0.75rem; padding: 6px 8px; }
+    .results th, .results td { padding: 4px; font-size: 0.7rem; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>ACG游戏姬抓取工具</h1>
+  <div class="subtitle">单 HTML 版 · 云端数据 · 手机直接打开</div>
+
+  <!-- 最新提示条 -->
+  <div id="latest-bar" class="latest-bar hidden">
+    📢 <b id="lb-date">--</b> 最新: <span id="lb-title">--</span>
+    <div class="small">数据更新于 <span id="lb-time">--</span> · 共 <span id="lb-total">0</span> 条</div>
+  </div>
+
+  <!-- 数据源 Tab -->
+  <div class="panel">
+    <div class="panel-title">① 数据源</div>
+    <div class="source-tabs">
+      <button id="tab-cloud" class="active" onclick="switchSource('cloud')">📦 云端数据</button>
+      <button id="tab-proxy" onclick="switchSource('proxy')">🌐 代理抓取</button>
+      <button id="tab-paste" onclick="switchSource('paste')">📋 粘贴 HTML</button>
+    </div>
+
+    <!-- ================== 云端数据源 ================== -->
+    <div id="src-cloud">
+      <div class="row">
+        <button class="green" onclick="loadCloudData(true)">刷新数据</button>
+        <span class="status" id="cloud-status" style="flex:1">就绪 · 首次进入将自动加载</span>
+      </div>
+    </div>
+
+    <!-- ================== 代理抓取(保留为本地备用) ================== -->
+    <div id="src-proxy" class="hidden">
+      <div class="row">
+        <label>CORS代理</label>
+        <input id="proxy-url" type="text" value="https://api.allorigins.win/get?url=">
+      </div>
+      <div class="help">
+        <code>allorigins/get</code> 默认 · 备用:<code>https://api.codetabs.com/v1/proxy?quest=</code> · <code>https://corsproxy.io/?</code>
+      </div>
+      <div class="row">
+        <label>页数</label>
+        <input id="pages" type="number" value="3" min="1" max="20">
+        <label>条数</label>
+        <input id="limit" type="number" value="20" min="1" max="200">
+        <label>延时</label>
+        <input id="delay" type="number" value="0.6" min="0" max="5" step="0.1">
+      </div>
+      <div class="row">
+        <button class="green" onclick="previewDates()">探测最新</button>
+        <button onclick="startScrape()">开始抓取</button>
+        <button class="ghost" onclick="stopTask()">停止</button>
+      </div>
+      <div id="status" class="status">就绪</div>
+      <div class="progress"><div id="progress-bar"></div></div>
+      <div id="log" class="log"></div>
+    </div>
+
+    <!-- ================== 粘贴 HTML(保留为本地备用) ================== -->
+    <div id="src-paste" class="hidden">
+      <div class="row">
+        <label>页面</label>
+        <select id="paste-type">
+          <option value="list">列表页</option>
+          <option value="detail">详情页</option>
+        </select>
+      </div>
+      <textarea id="paste-html" placeholder="浏览器打开 acgyx.us → 右键 → 查看网页源代码 → 全选 → 粘贴"></textarea>
+      <div class="row" style="margin-top: 8px;">
+        <button class="green" onclick="pasteParse()">解析这段HTML</button>
+        <button class="ghost" onclick="document.getElementById('paste-html').value=''">清空</button>
+      </div>
+      <div class="help">列表页一次解析 1 页(20 篇),详情页一次解析 1 篇</div>
+    </div>
+  </div>
+
+  <!-- 筛选 / 浏览 -->
+  <div class="panel">
+    <div class="panel-title">② 筛选 / 浏览</div>
+    <div class="mode-tabs" id="mode-tabs">
+      <button class="active" data-mode="all" onclick="switchView('all')">全部</button>
+      <button data-mode="single" onclick="switchView('single')">单天</button>
+      <button data-mode="range" onclick="switchView('range')">多天范围</button>
+      <button data-mode="pages" onclick="switchView('pages')">指定页面</button>
+    </div>
+
+    <!-- 模式参数 -->
+    <div id="vp-all" class="row"><span class="status">显示全部 <b id="cnt-all">0</b> 条</span></div>
+
+    <div id="vp-single" class="row hidden">
+      <label>日期</label>
+      <select id="vp-single-date"></select>
+      <span class="status" style="flex:1">命中 <b id="cnt-single">0</b> 条</span>
+    </div>
+
+    <div id="vp-range" class="row hidden">
+      <label>起</label>
+      <select id="vp-range-from"></select>
+      <label>止</label>
+      <select id="vp-range-to"></select>
+      <span class="status" style="flex:1">命中 <b id="cnt-range">0</b> 条</span>
+    </div>
+
+    <div id="vp-pages" class="row hidden">
+      <label>每页</label>
+      <input id="vp-pages-size" type="number" value="20" min="5" max="100" style="width:60px">
+      <span class="status" style="flex:1">第 <b id="vp-pages-cur">1</b> 页</span>
+    </div>
+
+    <div class="pager" id="pager">
+      <button class="ghost" onclick="pagePrev()">上一页</button>
+      <div class="pg-info" id="pg-info">--</div>
+      <button class="ghost" onclick="pageNext()">下一页</button>
+    </div>
+  </div>
+
+  <!-- 结果 -->
+  <div class="panel">
+    <div class="panel-title">③ 结果 (<span id="result-count">0</span> 条)</div>
+    <div class="row">
+      <button class="green" onclick="downloadTxt()">下载 TXT</button>
+      <button onclick="downloadJson()">下载 JSON</button>
+      <button class="ghost" onclick="copyTxt()">复制 TXT</button>
+      <button class="ghost" onclick="copyYun()">复制云盘</button>
+      <button class="ghost" onclick="clearResults()">清空</button>
+    </div>
+    <div class="results">
+      <table>
+        <thead><tr><th>分类</th><th>标题</th><th>时间</th><th>链接</th></tr></thead>
+        <tbody id="result-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+// ==================== 全局状态 ====================
+let CLOUD_DATA = null;        // { generated_at, total, latest_date, latest_title, items: [] }
+let CLOUD_ITEMS = [];         // = CLOUD_DATA.items 的引用(便于过滤)
+let RESULTS = [];             // 用户当前看到/操作的结果(可能是过滤后)
+let IS_RUNNING = false;
+let STOP_FLAG = false;
+let LAST_FILENAME = "";
+
+let VIEW_MODE = "all";        // all / single / range / pages
+let CURRENT_PAGE = 1;
+let PAGE_SIZE = 20;
+
+// JSON 数据路径(相对 acgyx.html)
+const JSON_URLS = [
+  "./data/acgyx_latest.json",
+  "./acgyx_latest.json",
+  "../data/acgyx_latest.json",
+];
+
+// ==================== DOM 解析(原代理抓取 fallback) ====================
+function parseHTML(html) {
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  if (doc.querySelector("parsererror")) return null;
+  return doc;
+}
+function getDetailText(doc) {
+  const c = doc.querySelector(".single-content") || doc.querySelector(".entry-content")
+         || doc.querySelector("article .content") || doc.querySelector("article")
+         || doc.body;
+  return c ? c.textContent : doc.body.textContent;
+}
+function parseListHTML(html) {
+  const doc = parseHTML(html); if (!doc) return [];
+  const posts = [];
+  doc.querySelectorAll("article").forEach(art => {
+    const a = art.querySelector("h2 a, h3 a, .entry-title a, .post-title a");
+    if (!a) return;
+    const title = a.textContent.trim();
+    const link = (a.getAttribute("href") || "").trim();
+    if (!link) return;
+    const catA = art.querySelector(".category .tags a, .cat, .entry-cat a");
+    const category = catA ? catA.textContent.trim() : "";
+    let pubTime = "";
+    const authorEl = art.querySelector(".list-post-author");
+    if (authorEl) {
+      const m = (authorEl.textContent || "").match(/(\d{4})[-./年](\d{1,2})[-./月](\d{1,2})/);
+      if (m) pubTime = `${m[1]}-${String(m[2]).padStart(2,"0")}-${String(m[3]).padStart(2,"0")}`;
+    }
+    if (!pubTime) {
+      for (const sel of ["time", ".date", ".entry-date", ".post-date", ".meta-date", ".published", "[datetime]"]) {
+        const el = art.querySelector(sel);
+        if (el) {
+          pubTime = (el.getAttribute("datetime") || el.getAttribute("title") || el.textContent || "").trim();
+          if (pubTime) break;
+        }
+      }
+    }
+    posts.push({ title, category, url: link, pub_time: pubTime });
+  });
+  return posts;
+}
+function parseDetailHTML(html) {
+  const doc = parseHTML(html);
+  if (!doc) return { yun_links: [], baidu_links: [], baidu_codes: [], cheat_code: "", unzip_code: "" };
+  const text = getDetailText(doc);
+  const yunLinks = [], bdLinks = [], bdCodes = [];
+  let m;
+  const reYun = /https?:\/\/yun\.139\.com[^\s)"']*/g;
+  while ((m = reYun.exec(text)) !== null) {
+    const link = m[0].replace(/[。,;；]+$/, "");
+    if (!yunLinks.includes(link)) yunLinks.push(link);
+  }
+  const reBd = /https?:\/\/pan\.baidu\.com\/s\/[^\s)"']*/g;
+  while ((m = reBd.exec(text)) !== null) {
+    const link = m[0].replace(/[。,;；]+$/, "");
+    if (!bdLinks.includes(link)) bdLinks.push(link);
+  }
+  const reCode = /提取码[：: ]*([a-zA-Z0-9]{2,8})/g;
+  while ((m = reCode.exec(text)) !== null) {
+    if (!bdCodes.includes(m[1])) bdCodes.push(m[1]);
+  }
+  const ccM = text.match(/作弊码[：: ]*([A-Za-z0-9]{2,16})/);
+  const uzM = text.match(/汉化包解压码[：: ]*([A-Za-z0-9]{2,16})/);
+  return { yun_links: yunLinks, baidu_links: bdLinks, baidu_codes: bdCodes,
+           cheat_code: ccM ? ccM[1] : "", unzip_code: uzM ? uzM[1] : "" };
+}
+
+// ==================== 标题简化(移植自 Python) ====================
+const CLASS_WORDS = ("SLG|RPG|ACT|AVG|RTS|TPS|FPS|MOBA|探索|冒险|动作|色情|动漫|后宫|动态|"
+                    + "异种|奇幻|异世界|美少女|情色|幻想|射击|沙盒|家园|战略|休闲|卖春|援交|"
+                    + "魅魔|淫魔|堕落|塔防|解谜|策略|惊悚|恐怖|校园|恋爱|科幻|魔幻|玄幻|武侠|"
+                    + "历史|现代|未来|末日|都市|乡村|野外|室内|真人|3D|2D|像素|全动态|步兵|"
+                    + "赞助|官中|汉化|剧情|H|经营|养成|卡牌|消除|益智|音乐|舞蹈|竞速|体育|"
+                    + "格斗|搏击|拳击|摔角|摔跤|相扑|神作|新作|更新");
+const CLASS_WORDS_RE = new RegExp(CLASS_WORDS);
+const SUFFIX_KEYWORDS = [
+  "内嵌AI汉化版", "内嵌汉化版", "内嵌版",
+  "AI汉化版", "AI汉化补丁",
+  "汉化版", "汉化补丁", "汉化补丁版",
+  "官中步兵版", "官中赞助版", "官中版",
+  "赞助版", "步兵版",
+  "作弊码", "存档"
+];
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+function _splitNameSuffix(text) {
+  if (!text) return ["", ""];
+  const kws = [...SUFFIX_KEYWORDS].sort((a, b) => b.length - a.length);
+  for (const kw of kws) {
+    const idx = text.indexOf(kw);
+    if (idx > 0) return [text.slice(0, idx).trim(), text.slice(idx).trim()];
+  }
+  return ["", text.trim()];
+}
+function _extractChineseName(text) {
+  if (!text) return "";
+  const parts = text.trim().split(/\s+/);
+  const out = [];
+  for (const p of parts) {
+    if (!p) continue;
+    if (/[\u3040-\u309f\u30a0-\u30ff]/.test(p)) continue;
+    if (/[\u4e00-\u9fff]/.test(p)) { out.push(p); if (out.length >= 2) break; }
+  }
+  return out.length ? out.join(" ") : text.trim();
+}
+function simplifyTitle(title, category, cheatCode = "", unzipCode = "") {
+  if (!title) return "";
+  let t = title;
+  let sizeBrackets = "", sizeMatch = null;
+  for (const pat of [/\[([^\[\]]*)\]\s*$/, /\u3010([^\u3010\u3011]*)\u3011\s*$/]) {
+    const m = t.match(pat);
+    if (!m) continue;
+    const content = m[1];
+    const isClass = CLASS_WORDS_RE.test(content);
+    const isSize = (/\d+\.?\d*\s*[MGK]/i.test(content)) || (content.includes("PC+"))
+                || (content.trim() === "PC" || content.trim() === "安卓");
+    if (isSize && !isClass) {
+      sizeMatch = m; sizeBrackets = m[0];
+      t = t.slice(0, m.index).trim(); break;
+    }
+  }
+  t = t.replace(/\u3010[^\u3010\u3011]*\u3011/g, "").replace(/\[[^\[\]]*\]/g, "")
+       .replace(/[（(][^)）]*[)）]/g, "").replace(/\s*v\d+[\w.]*\b/gi, " ");
+  t = t.replace(/^(更新|新作|增添)(?:\s*[A-Z]+)?\s*/, "");
+  for (const sym of [":", "/", "?", "?", ",", "&"]) t = t.split(sym).join(" ");
+  t = t.replace(/\s+/g, " ").trim();
+  let [nameRaw, suffix] = _splitNameSuffix(t);
+  let name = nameRaw ? _extractChineseName(nameRaw) : "";
+  if (!nameRaw) suffix = t;
+  let endBracket = "";
+  if (category === "PC" && sizeMatch) {
+    const sizeIn = sizeMatch[1];
+    const ms = sizeIn.match(/(\d+\.?\d*\s*[MGK])/i);
+    endBracket = `[PC ${(ms ? ms[1] : sizeIn).trim()}]`;
+  } else endBracket = sizeBrackets;
+  if (cheatCode && (title || "").includes("作弊码")) {
+    if (suffix.includes("作弊码")) suffix = suffix.replace("作弊码", `作弊码${cheatCode}`);
+    else suffix = (suffix ? suffix + "作弊码" : "作弊码") + cheatCode;
+  }
+  const extras = [];
+  if (unzipCode && (title || "").includes("汉化")) extras.push(`汉化包解压码${unzipCode}`);
+  const mainParts = [];
+  if (name && suffix) mainParts.push(`${name}-${suffix.replace(/\s+$/, "")}`);
+  else if (name) mainParts.push(name);
+  else if (suffix) mainParts.push(suffix.replace(/\s+$/, ""));
+  if (extras.length) mainParts.push(extras.join(""));
+  const main = mainParts.filter(p => p).join(" ").trim();
+  if (endBracket && main) return `${main} ${endBracket}`.trim();
+  if (endBracket) return endBracket.trim();
+  return main || (title || "").trim();
+}
+
+// ==================== TXT 渲染 ====================
+function renderTxt(rows) {
+  const lines = ["Tsinho爬取工具"];
+  if (!rows.length) { lines.push("(无匹配结果)"); return lines.join("\n"); }
+  rows.forEach((r, i) => {
+    if (i > 0) lines.push("");
+    lines.push(`标题:${r.title || ""}`);
+    lines.push(`分类:${r.category || ""}`);
+    lines.push(`发布时间:${r.pub_time || ""}`);
+    const yun = r.yun_links || [];
+    if (yun.length) yun.forEach((l, idx) => lines.push(`下载链接${idx + 1}:${l}`));
+    else lines.push("下载链接:(无)");
+    lines.push(`原文链接:${r.url || ""}`);
+  });
+  return lines.join("\n");
+}
+
+// ==================== UI 辅助 ====================
+function $(id) { return document.getElementById(id); }
+function setStatus(msg, cls = "") {
+  const el = $("status");
+  el.className = "status" + (cls ? " " + cls : "");
+  el.textContent = msg;
+}
+function setCloudStatus(msg, cls = "") {
+  const el = $("cloud-status");
+  el.className = "status" + (cls ? " " + cls : "");
+  el.textContent = msg;
+}
+function log(msg) {
+  const el = $("log");
+  const t = new Date().toTimeString().slice(0, 8);
+  const div = document.createElement("div");
+  div.textContent = `[${t}] ${msg}`;
+  el.appendChild(div); el.scrollTop = el.scrollHeight;
+}
+function setProgress(p) { $("progress-bar").style.width = `${Math.round(p * 100)}%`; }
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  }[c]));
+}
+function renderResults(rows) {
+  rows = rows || RESULTS;
+  $("result-count").textContent = rows.length;
+  const tbody = $("result-tbody");
+  tbody.innerHTML = "";
+  rows.forEach(r => {
+    const tr = document.createElement("tr");
+    const cat = r.category || "?";
+    const cls = (cat === "PC" || cat === "AZ") ? cat : "OTHER";
+    tr.innerHTML = `
+      <td><span class="badge ${cls}">${escapeHtml(cat)}</span></td>
+      <td>${escapeHtml(r.title || "")}</td>
+      <td>${escapeHtml(r.pub_time || "")}</td>
+      <td><a href="${escapeHtml(r.url || "#")}" target="_blank" style="color:var(--accent)">打开</a></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// ==================== 数据源切换 ====================
+function switchSource(src) {
+  ["cloud", "proxy", "paste"].forEach(s => {
+    $(`tab-${s}`).classList.toggle("active", s === src);
+    $(`src-${s}`).classList.toggle("hidden", s !== src);
+  });
+}
+
+// ==================== 云端数据加载 ====================
+async function loadCloudData(manual) {
+  setCloudStatus("正在加载云端数据 ...", "");
+  for (const url of JSON_URLS) {
+    try {
+      const r = await fetch(url, { cache: "no-store" });
+      if (!r.ok) continue;
+      const j = await r.json();
+      if (!j || !Array.isArray(j.items)) continue;
+      CLOUD_DATA = j;
+      CLOUD_ITEMS = j.items || [];
+      fillLatestBar();
+      fillDateSelectors();
+      switchView(VIEW_MODE);
+      setCloudStatus(`已加载 ${CLOUD_ITEMS.length} 条 (来源: ${url})`, "ok");
+      return;
+    } catch (e) {
+      // 试下一个
+    }
+  }
+  setCloudStatus("加载失败: 所有路径都打不开 JSON。" +
+    "可能原因:① 没联网 ② 还没跑过 scraper ③ 文件路径不对", "err");
+}
+
+function fillLatestBar() {
+  if (!CLOUD_DATA) return;
+  const bar = $("latest-bar");
+  bar.classList.remove("hidden");
+  $("lb-date").textContent = CLOUD_DATA.latest_date || "--";
+  $("lb-title").textContent = CLOUD_DATA.latest_title || "--";
+  $("lb-total").textContent = CLOUD_DATA.total || 0;
+  $("lb-time").textContent = (CLOUD_DATA.generated_at || "--").replace("T", " ").slice(0, 16);
+}
+
+function fillDateSelectors() {
+  // 收集所有出现过的日期(降序,最新在前)
+  const dates = Array.from(new Set(
+    CLOUD_ITEMS.map(it => it.pub_time).filter(Boolean)
+  )).sort().reverse();
+  const opts = dates.map(d => `<option value="${d}">${d}</option>`).join("");
+  $("vp-single-date").innerHTML = opts;
+  $("vp-range-from").innerHTML = opts;
+  $("vp-range-to").innerHTML = opts;
+  if (dates.length) {
+    $("vp-range-to").value = dates[0];
+    $("vp-range-from").value = dates[dates.length - 1] || dates[0];
+  }
+}
+
+// ==================== 筛选 / 浏览 ====================
+function switchView(mode) {
+  VIEW_MODE = mode;
+  CURRENT_PAGE = 1;
+  document.querySelectorAll("#mode-tabs button").forEach(b => {
+    b.classList.toggle("active", b.dataset.mode === mode);
+  });
+  ["all", "single", "range", "pages"].forEach(v => $(`vp-${v}`).classList.toggle("hidden", v !== mode));
+  applyView();
+}
+
+function applyView() {
+  if (!CLOUD_DATA) { renderResults([]); return; }
+  let items = CLOUD_ITEMS;
+  if (VIEW_MODE === "single") {
+    const d = $("vp-single-date").value;
+    items = items.filter(it => it.pub_time === d);
+    $("cnt-single").textContent = items.length;
+  } else if (VIEW_MODE === "range") {
+    const from = $("vp-range-from").value;
+    const to = $("vp-range-to").value;
+    const lo = from <= to ? from : to;
+    const hi = from <= to ? to : from;
+    items = items.filter(it => it.pub_time && it.pub_time >= lo && it.pub_time <= hi);
+    $("cnt-range").textContent = items.length;
+  } else if (VIEW_MODE === "pages") {
+    PAGE_SIZE = parseInt($("vp-pages-size").value, 10) || 20;
+    PAGE_SIZE = Math.max(5, Math.min(100, PAGE_SIZE));
+    $("vp-pages-cur").textContent = CURRENT_PAGE;
+  }
+  // 默认按时间倒序
+  items = [...items].sort((a, b) => (b.pub_time || "").localeCompare(a.pub_time || ""));
+  if (VIEW_MODE === "pages") {
+    const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
+    if (CURRENT_PAGE > totalPages) CURRENT_PAGE = totalPages;
+    const start = (CURRENT_PAGE - 1) * PAGE_SIZE;
+    const paged = items.slice(start, start + PAGE_SIZE);
+    RESULTS = paged;
+    $("pg-info").textContent = `${CURRENT_PAGE} / ${totalPages} 页 · 共 ${items.length} 条`;
+  } else {
+    RESULTS = items;
+    $("pg-info").textContent = `共 ${items.length} 条`;
+  }
+  $("cnt-all").textContent = CLOUD_ITEMS.length;
+  renderResults(RESULTS);
+}
+function pagePrev() { if (CURRENT_PAGE > 1) { CURRENT_PAGE--; applyView(); } }
+function pageNext() { CURRENT_PAGE++; applyView(); }
+
+// ==================== 代理抓取(fallback) ====================
+async function fetchViaProxy(url) {
+  const base = $("proxy-url").value.trim();
+  if (!base) throw new Error("CORS 代理地址为空");
+  let sep = "";
+  if (base.includes("?url=") || base.includes("?quest=")) {
+    sep = base.includes("=") && base.endsWith("=") ? "" : "&url=";
+  } else if (base.includes("?")) sep = "&url="; else sep = "?url=";
+  const full = base + sep + encodeURIComponent(url);
+  const resp = await fetch(full);
+  if (!resp.ok) throw new Error(`代理返回 ${resp.status}`);
+  const text = await resp.text();
+  if (text.startsWith("{") && text.includes('"contents"')) {
+    try {
+      const obj = JSON.parse(text);
+      let c = obj.contents || "";
+      try { const d = atob(c); if (/[\u4e00-\u9fff]/.test(d)) c = d; } catch (_) {}
+      return c;
+    } catch (e) { throw new Error("代理 JSON 解析失败: " + e.message); }
+  }
+  return text;
+}
+
+async function previewDates() {
+  if (IS_RUNNING) return;
+  IS_RUNNING = true; STOP_FLAG = false;
+  setStatus("正在探测最新 ...", "");
+  $("log").innerHTML = ""; setProgress(0);
+  try {
+    log(`GET https://acgyx.us/`);
+    const html = await fetchViaProxy("https://acgyx.us/");
+    const posts = parseListHTML(html);
+    if (!posts.length) throw new Error("解析到 0 篇,可能被反爬或 HTML 结构变了");
+    posts.sort((a, b) => (b.pub_time || "").localeCompare(a.pub_time || ""));
+    setStatus(`最新: ${posts[0].pub_time} - ${posts[0].title}`, "ok");
+  } catch (e) {
+    setStatus(`失败: ${e.message}`, "err");
+    log("[错误] " + e.message);
+  } finally {
+    IS_RUNNING = false; setProgress(1);
+  }
+}
+
+async function startScrape() {
+  if (IS_RUNNING) return;
+  IS_RUNNING = true; STOP_FLAG = false; RESULTS = []; renderResults();
+  setStatus("开始抓取 ...", "");
+  $("log").innerHTML = ""; setProgress(0);
+  const pages = parseInt($("pages").value, 10) || 1;
+  const limit = parseInt($("limit").value, 10) || 0;
+  const delay = (parseFloat($("delay").value, 10) || 0) * 1000;
+  const EXCLUDE = new Set(["喵笔记"]);
+  const all = [];
+  for (let p = 1; p <= pages; p++) {
+    if (STOP_FLAG) { log("已停止"); break; }
+    const url = p === 1 ? "https://acgyx.us/" : `https://acgyx.us/page/${p}`;
+    log(`[列表] 第 ${p}/${pages} 页: ${url}`);
+    try {
+      const html = await fetchViaProxy(url);
+      const posts = parseListHTML(html);
+      log(`  解析 ${posts.length} 篇`);
+      all.push(...posts);
+    } catch (e) { log(`  [错误] ${e.message}`); }
+    setProgress((p / pages) * 0.3);
+    await sleep(delay + Math.random() * 300);
+  }
+  if (!all.length) { setStatus("列表抓取失败: 0 条", "err"); IS_RUNNING = false; return; }
+  const seen = new Set();
+  const filtered = all.filter(p => {
+    if (seen.has(p.url)) return false;
+    seen.add(p.url);
+    if (EXCLUDE.has(p.category)) return false;
+    return true;
+  }).slice(0, limit || all.length);
+  log(`筛选后: ${filtered.length} 条`);
+  const total = filtered.length;
+  for (let i = 0; i < total; i++) {
+    if (STOP_FLAG) { log("已停止"); break; }
+    const p = filtered[i];
+    log(`[详情 ${i + 1}/${total}] ${p.title.slice(0, 30)}`);
+    try {
+      const html = await fetchViaProxy(p.url);
+      const info = parseDetailHTML(html);
+      const newTitle = simplifyTitle(p.title, p.category || "", info.cheat_code || "", info.unzip_code || "");
+      RESULTS.push({ ...p, ...info, title: newTitle });
+    } catch (e) {
+      log(`  [错误] ${e.message}, 保留原标题`);
+      RESULTS.push({ ...p, yun_links: [], baidu_links: [], baidu_codes: [], cheat_code: "", unzip_code: "" });
+    }
+    setProgress(0.3 + (i + 1) / total * 0.7); renderResults();
+    if (i < total - 1) await sleep(delay + Math.random() * 300);
+  }
+  setStatus(`完成: 共 ${RESULTS.length} 条`, "ok"); setProgress(1);
+  IS_RUNNING = false;
+}
+function stopTask() { STOP_FLAG = true; log("正在停止 ..."); }
+
+// ==================== 粘贴 HTML ====================
+function pasteParse() {
+  const html = $("paste-html").value.trim();
+  if (!html) { alert("请先粘贴 HTML 源码"); return; }
+  const type = $("paste-type").value;
+  if (type === "list") {
+    const posts = parseListHTML(html);
+    if (!posts.length) { alert("解析到 0 篇"); return; }
+    posts.forEach(p => {
+      RESULTS.push({ ...p, yun_links: [], baidu_links: [], baidu_codes: [],
+        cheat_code: "", unzip_code: "",
+        title: simplifyTitle(p.title, p.category || "", "", "") });
+    });
+    renderResults(); alert(`已添加 ${posts.length} 条列表`);
+  } else {
+    const doc = parseHTML(html); if (!doc) { alert("HTML 解析失败"); return; }
+    const tEl = doc.querySelector("h1.entry-title, h1.post-title, h1");
+    const title = tEl ? tEl.textContent.trim() : "(未识别标题)";
+    const info = parseDetailHTML(html);
+    const newTitle = simplifyTitle(title, "", info.cheat_code, info.unzip_code);
+    RESULTS.push({ title: newTitle, category: "(详情页)", pub_time: new Date().toISOString().slice(0,10),
+      url: location.href, ...info });
+    renderResults(); alert(`已添加 1 条: ${newTitle}`);
+  }
+}
+
+// ==================== 导出 ====================
+function downloadBlob(content, filename, mime) {
+  const blob = new Blob([content], { type: mime });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = filename;
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 100);
+}
+function downloadTxt() {
+  if (!RESULTS.length) { alert("没有结果可下载"); return; }
+  downloadBlob(renderTxt(RESULTS),
+    `acgyx_${new Date().toISOString().slice(0,10).replace(/-/g,"")}.txt`,
+    "text/plain;charset=utf-8");
+}
+function downloadJson() {
+  if (!RESULTS.length) { alert("没有结果可下载"); return; }
+  downloadBlob(JSON.stringify(RESULTS, null, 2),
+    `acgyx_${new Date().toISOString().slice(0,10).replace(/-/g,"")}.json`,
+    "application/json;charset=utf-8");
+}
+function copyTxt() {
+  if (!RESULTS.length) { alert("没有结果"); return; }
+  navigator.clipboard.writeText(renderTxt(RESULTS))
+    .then(() => alert("已复制 TXT"), () => alert("复制失败,请用下载"));
+}
+function copyYun() {
+  if (!RESULTS.length) { alert("没有结果"); return; }
+  const lines = [];
+  RESULTS.forEach(r => {
+    (r.yun_links || []).forEach(l => {
+      const code = (r.baidu_codes && r.baidu_codes[0]) || "";
+      lines.push(`${r.title}\t${l}\t${code}`);
+    });
+  });
+  if (!lines.length) { alert("当前结果中没有云盘链接"); return; }
+  navigator.clipboard.writeText(lines.join("\n"))
+    .then(() => alert(`已复制 ${lines.length} 条云盘链接`), () => alert("复制失败"));
+}
+function clearResults() {
+  if (!confirm("确认清空当前结果?")) return;
+  RESULTS = []; renderResults();
+}
+
+// ==================== 事件绑定 ====================
+$("vp-single-date").addEventListener("change", applyView);
+$("vp-range-from").addEventListener("change", applyView);
+$("vp-range-to").addEventListener("change", applyView);
+$("vp-pages-size").addEventListener("change", () => { CURRENT_PAGE = 1; applyView(); });
+
+// ==================== 启动 ====================
+setCloudStatus("就绪 · 首次进入将自动加载", "");
+loadCloudData(false);
+</script>
+</body>
+</html>

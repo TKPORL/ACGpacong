@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+.eggs/
+
+# 虚拟环境
+.venv/
+venv/
+env/
+
+# 测试截图(临时)
+单html版本/_test_shot_*.png
+单html版本/_shot_*.png
+
+# 电脑版测试临时文件
+电脑版/_*.json
+电脑版/_*.out
+电脑版/_*.err
+电脑版/_*.log
+电脑版/_t_*.py
+电脑版/test_*.py
+
+# 操作系统
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 杂项
+*.log
+*.bak
+*.tmp

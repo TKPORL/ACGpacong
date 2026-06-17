@@ -1,0 +1,60 @@
+name: 抓取 ACG 游戏姬
+
+on:
+  # 北京时间 8:00 / 13:00 / 20:00 → UTC 0:00 / 5:00 / 12:00
+  schedule:
+    - cron: "0 0,5,12 * * *"
+  workflow_dispatch:        # 手动触发,便于测试
+  push:
+    paths:
+      - "电脑版/**"
+      - ".github/workflows/scrape.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: 缓存 pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('电脑版/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: 安装依赖
+        working-directory: 电脑版
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: 抓取并生成 JSON
+        working-directory: 电脑版
+        run: |
+          python scraper.py --pages 3 --delay 0.6 --out ../data/acgyx_latest.json
+          python scraper.py --pages 3 --delay 0.6 --out ../单html版本/data/acgyx_latest.json
+
+      - name: 提交并推送
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/acgyx_latest.json 单html版本/data/acgyx_latest.json
+          if git diff --staged --quiet; then
+            echo "无更新,无需提交"
+          else
+            git commit -m "chore: 抓取更新 $(date -u +'%Y-%m-%d %H:%M UTC')"
+            git push
+          fi

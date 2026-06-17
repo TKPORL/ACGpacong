@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ACG游戏姬 - 帖子抓取工具</title>
+<link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><text y='52' font-size='52'>🎮</text></svg>">
+<style>
+  :root {
+    --bg: #0f1117;
+    --card: #1a1d27;
+    --border: #2a2d3a;
+    --text: #e0e0e0;
+    --muted: #888;
+    --accent: #6c63ff;
+    --accent2: #ff6b6b;
+    --green: #51cf66;
+    --yellow: #fcc419;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+    min-height: 100vh;
+    padding: 24px;
+  }
+  .container {
+    max-width: 960px;
+    margin: 0 auto;
+  }
+  h1 {
+    text-align: center;
+    font-size: 1.6rem;
+    margin-bottom: 8px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .subtitle {
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.85rem;
+    margin-bottom: 24px;
+  }
+
+  /* 加载状态 */
+  #loading-bar {
+    display: none;
+    background: var(--accent);
+    height: 3px;
+    width: 0%;
+    transition: width 0.3s;
+    margin-bottom: 20px;
+    border-radius: 2px;
+  }
+
+  /* 最新信息 */
+  .latest-info {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    display: none;
+  }
+  .latest-info.show { display: block; }
+  .latest-info .label {
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .latest-info .date {
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: var(--accent);
+    margin-bottom: 6px;
+  }
+  .latest-info .title {
+    font-size: 0.9rem;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* 控制面板 */
+  .panel {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+  .panel-title {
+    font-size: 0.85rem;
+    font-weight: bold;
+    margin-bottom: 14px;
+    color: var(--accent);
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 8px;
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  @media (max-width: 600px) {
+    .form-grid { grid-template-columns: 1fr; }
+  }
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field label {
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+  .field input, .field select {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 10px;
+    color: var(--text);
+    font-size: 0.9rem;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .field input:focus, .field select:focus {
+    border-color: var(--accent);
+  }
+  .hint {
+    font-size: 0.72rem;
+    color: var(--muted);
+  }
+
+  /* 高级选项折叠 */
+  .advanced-toggle {
+    font-size: 0.8rem;
+    color: var(--accent);
+    cursor: pointer;
+    user-select: none;
+    margin-top: 12px;
+  }
+  .advanced-toggle:hover { text-decoration: underline; }
+  #advanced-panel {
+    display: none;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--border);
+  }
+  #advanced-panel.open { display: block; }
+
+  /* 高级选项 - 模式切换 tab */
+  .mode-tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+  .mode-tab {
+    padding: 6px 14px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--bg);
+    color: var(--muted);
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    user-select: none;
+  }
+  .mode-tab:hover { color: var(--text); }
+  .mode-tab.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .mode-content { display: none; }
+  .mode-content.active { display: grid; }
+
+  /* 按钮区 */
+  .actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 18px;
+    flex-wrap: wrap;
+  }
+  .btn {
+    padding: 10px 22px;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-family: inherit;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.1s;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+  }
+  .btn-primary:hover:not(:disabled) { opacity: 0.85; }
+  .btn-ghost {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+  .btn-ghost:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  .btn-stop {
+    background: var(--red);
+    color: #fff;
+  }
+  .btn-stop:hover:not(:disabled) { opacity: 0.85; }
+
+  /* 进度条 */
+  #progress-wrap { display: none; margin-top: 14px; }
+  #progress-wrap.show { display: block; }
+  .progress-bar-bg {
+    background: var(--bg);
+    border-radius: 6px;
+    height: 8px;
+    overflow: hidden;
+  }
+  .progress-bar-fill {
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    height: 100%;
+    width: 0%;
+    transition: width 0.3s;
+    border-radius: 6px;
+  }
+  #progress-text {
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-top: 6px;
+  }
+
+  /* 日志 */
+  #log-box {
+    background: #0a0c10;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    max-height: 180px;
+    overflow-y: auto;
+    font-size: 0.78rem;
+    font-family: "Consolas", "Courier New", monospace;
+    color: #9ec5fe;
+    display: none;
+    margin-top: 14px;
+  }
+  #log-box.show { display: block; }
+  #log-box div { margin-bottom: 2px; }
+  #log-box .err { color: var(--accent2); }
+
+  /* 结果区 */
+  #result-panel {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 20px;
+    display: none;
+  }
+  #result-panel.show { display: block; }
+  .result-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .result-header h2 {
+    font-size: 0.95rem;
+    color: var(--green);
+  }
+  .result-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .btn-download {
+    background: var(--green);
+    color: #111;
+    font-weight: bold;
+  }
+  .btn-download:hover:not(:disabled) { opacity: 0.8; }
+  .btn-copy {
+    background: var(--yellow);
+    color: #111;
+  }
+
+  /* 结果预览 */
+  #result-preview {
+    background: #0a0c10;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    max-height: 400px;
+    overflow-y: auto;
+    font-size: 0.78rem;
+    font-family: "Consolas", "Courier New", monospace;
+    white-space: pre-wrap;
+    word-break: break-all;
+    color: var(--text);
+    display: none;
+  }
+  #result-preview.show { display: block; }
+
+  /* 状态提示 */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--card);
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    padding: 10px 18px;
+    font-size: 0.85rem;
+    color: var(--text);
+    z-index: 9999;
+    display: none;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  }
+  .toast.show { display: block; }
+  .toast.error { border-color: var(--accent2); color: var(--accent2); }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <h1>ACG游戏姬 - 帖子抓取工具</h1>
+  <p class="subtitle">https://acgyx.us &nbsp;|&nbsp; 提取标题、分类(PC/AZ)、移动云盘链接</p>
+
+  <div id="loading-bar"></div>
+
+  <!-- 最新帖子信息 -->
+  <div class="latest-info" id="latest-info">
+    <div class="label">
+      最新帖子
+      <a href="javascript:loadDates()" id="btn-reload" style="float:right; font-size:0.72rem; color:var(--accent); text-decoration:none; cursor:pointer;">[ 重新加载日期 ]</a>
+    </div>
+    <div class="date" id="latest-date">加载中...</div>
+    <div class="title" id="latest-title"></div>
+  </div>
+
+  <!-- 控制面板 -->
+  <div class="panel">
+    <div class="panel-title">抓取设置</div>
+    <div class="form-grid">
+      <div class="field">
+        <label>选择日期</label>
+        <select id="sel-date">
+          <option value="">-- 加载中... --</option>
+        </select>
+        <span class="hint">直接选一天抓取(最常用)</span>
+      </div>
+      <div class="field">
+        <label>请求间隔 (秒)</label>
+        <input type="number" id="inp-delay" value="0.6" min="0" step="0.1">
+        <span class="hint">太短可能触发网站限速</span>
+      </div>
+    </div>
+
+    <!-- 高级选项 -->
+    <div class="advanced-toggle" id="advanced-toggle">&#9660; 高级选项 (多天范围 / 指定页面)</div>
+    <div id="advanced-panel">
+
+      <!-- 模式切换 -->
+      <div style="font-size:0.78rem; color:var(--muted); margin-bottom:6px;">抓取模式:</div>
+      <div class="mode-tabs" id="mode-tabs">
+        <div class="mode-tab" data-mode="single">单天抓取</div>
+        <div class="mode-tab active" data-mode="range">多天范围</div>
+        <div class="mode-tab" data-mode="pages">指定页面</div>
+      </div>
+
+      <!-- 模式 A: 多天范围 -->
+      <div class="mode-content form-grid active" data-mode-content="range">
+        <div class="field">
+          <label>起始日期</label>
+          <select id="sel-date-from">
+            <option value="">-- 加载中... --</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>结束日期 (含)</label>
+          <select id="sel-date-to">
+            <option value="">-- 加载中... --</option>
+          </select>
+        </div>
+        <div class="field" style="grid-column: 1/-1;">
+          <span class="hint">从 <b id="hint-date-from">最早</b> 到 <b id="hint-date-to">最新</b> 的所有帖子</span>
+        </div>
+      </div>
+
+      <!-- 模式 B: 指定页面 -->
+      <div class="mode-content form-grid" data-mode-content="pages">
+        <div class="field">
+          <label>指定页数 (1~20)</label>
+          <input type="number" id="inp-pages" value="3" min="1" max="20">
+          <span class="hint">不按日期过滤,直接抓取前 N 页</span>
+        </div>
+        <div class="field">
+          <label>最多抓取条数 (0=不限)</label>
+          <input type="number" id="inp-limit-pages" value="0" min="0">
+          <span class="hint">抓够后立刻停止</span>
+        </div>
+      </div>
+
+      <!-- 模式 C: 单天(同步上方"选择日期") -->
+      <div class="mode-content" data-mode-content="single">
+        <div class="hint" style="padding: 8px 0;">
+          单天模式:使用上方"选择日期"下拉框,选择哪天就抓哪天。留空 = 抓所有日期。
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 按钮 -->
+    <div class="actions">
+      <button class="btn btn-primary" id="btn-scrape" onclick="doScrape()">开始抓取</button>
+      <button class="btn btn-stop" id="btn-stop" onclick="stopScrape()" disabled>停止</button>
+      <button class="btn btn-ghost" id="btn-clear" onclick="clearResult()">清空</button>
+    </div>
+
+    <!-- 进度 -->
+    <div id="progress-wrap">
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill" id="progress-fill"></div>
+      </div>
+      <div id="progress-text">准备中...</div>
+    </div>
+
+    <!-- 日志 -->
+    <div id="log-box"></div>
+  </div>
+
+  <!-- 结果 -->
+  <div id="result-panel">
+    <div class="result-header">
+      <h2 id="result-summary">抓取完成</h2>
+      <div class="result-actions">
+        <button class="btn btn-download" id="btn-dl-txt" onclick="downloadTxt()">下载 TXT</button>
+        <button class="btn btn-ghost" id="btn-dl-json" onclick="downloadJson()">下载 JSON</button>
+        <button class="btn btn-copy btn-copy" id="btn-copy" onclick="copyText()">复制文本</button>
+      </div>
+    </div>
+    <div id="result-preview"></div>
+  </div>
+
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+const API = "";
+let currentTaskId = null;
+let currentFilename = "acgyx_posts";
+
+// -------- 页面加载 --------
+window.addEventListener("DOMContentLoaded", loadDates);
+
+async function loadDates() {
+  showLoading(true);
+  try {
+    const r = await fetch(API + "/api/preview_dates");
+    const d = await r.json();
+    if (d.error) { toast(d.error, true); return; }
+
+    // 最新帖子
+    const li = document.getElementById("latest-info");
+    li.classList.add("show");
+    document.getElementById("latest-date").textContent = d.latest_date || "未知";
+    document.getElementById("latest-title").textContent = d.latest_title || "";
+
+    // 填充下拉
+    const sel = document.getElementById("sel-date");
+    sel.innerHTML = '<option value="">-- 不限日期 --</option>';
+    for (const dt of (d.dates || [])) {
+      sel.append(new Option(dt, dt));
+    }
+    // 默认选中最新日期
+    if (d.latest_date) sel.value = d.latest_date;
+
+    // 同步填充"起始日期"和"结束日期"下拉(高级选项 - 多天范围)
+    const selFrom = document.getElementById("sel-date-from");
+    const selTo = document.getElementById("sel-date-to");
+    selFrom.innerHTML = "";
+    selTo.innerHTML = "";
+    // dates 是降序(最新在前),追加时倒序展示,便于选起止
+    const sortedAsc = (d.dates || []).slice().reverse();
+    for (const dt of sortedAsc) {
+      selFrom.append(new Option(dt, dt));
+      selTo.append(new Option(dt, dt));
+    }
+    // 提示文本
+    if (sortedAsc.length) {
+      document.getElementById("hint-date-from").textContent = sortedAsc[0];
+      document.getElementById("hint-date-to").textContent = sortedAsc[sortedAsc.length - 1];
+    }
+    // 默认:起始=最早,结束=最新
+    if (sortedAsc.length) {
+      selFrom.value = sortedAsc[0];
+      selTo.value = sortedAsc[sortedAsc.length - 1];
+    }
+  } catch (e) {
+    toast("加载日期失败: " + e.message, true);
+  } finally {
+    showLoading(false);
+  }
+}
+
+function showLoading(v) {
+  document.getElementById("loading-bar").style.display = v ? "block" : "none";
+}
+
+// -------- 高级选项折叠 --------
+document.getElementById("advanced-toggle").addEventListener("click", function() {
+  const p = document.getElementById("advanced-panel");
+  const open = p.classList.toggle("open");
+  this.innerHTML = open ? "&#9650; 收起高级选项" : "&#9660; 高级选项 (多天范围 / 指定页面)";
+});
+
+// -------- 高级选项 - 模式 tab 切换 --------
+let CURRENT_MODE = "range";  // 默认多天范围
+function switchMode(mode) {
+  CURRENT_MODE = mode;
+  document.querySelectorAll("#mode-tabs .mode-tab").forEach(t => {
+    t.classList.toggle("active", t.dataset.mode === mode);
+  });
+  document.querySelectorAll("[data-mode-content]").forEach(c => {
+    c.classList.toggle("active", c.dataset.modeContent === mode);
+  });
+}
+document.querySelectorAll("#mode-tabs .mode-tab").forEach(tab => {
+  tab.addEventListener("click", () => switchMode(tab.dataset.mode));
+});
+
+// -------- 抓取 --------
+async function doScrape() {
+  const btn = document.getElementById("btn-scrape");
+  btn.disabled = true;
+  clearResult();
+
+  const date = document.getElementById("sel-date").value;
+  const date_from = document.getElementById("sel-date-from").value;
+  const date_to = document.getElementById("sel-date-to").value;
+  const pages = parseInt(document.getElementById("inp-pages").value) || 3;
+  const limit = parseInt(document.getElementById("inp-limit-pages").value) || 0;
+  const delay = parseFloat(document.getElementById("inp-delay").value) || 0.6;
+  const mode = CURRENT_MODE;  // "single" | "range" | "pages"
+
+  // 校验
+  if (mode === "range") {
+    if (date_from && date_to && date_from > date_to) {
+      toast("起始日期不能晚于结束日期", true);
+      btn.disabled = false;
+      return;
+    }
+  }
+
+  // 拼装 body,只发当前模式需要的字段
+  const body = { mode, delay };
+  if (mode === "single") {
+    body.date = date;
+    body.date_from = "";
+    body.date_to = "";
+    body.pages = 0;  // 不限页数
+  } else if (mode === "range") {
+    body.date = "";
+    body.date_from = date_from;
+    body.date_to = date_to;
+    body.pages = 0;
+  } else {  // pages
+    body.date = "";
+    body.date_from = "";
+    body.date_to = "";
+    body.pages = pages;
+  }
+  body.limit = limit;
+
+  showProgress(true);
+  setLog("");
+  document.getElementById("btn-stop").disabled = false;
+  log(`开始抓取 | 模式=${mode === "single" ? "单天" : mode === "range" ? "多天范围" : "指定页面"}`);
+
+  try {
+    const r = await fetch(API + "/api/scrape", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const d = await r.json();
+
+    if (d.error) { toast(d.error, true); return; }
+
+    if (d.status === "done") {
+      showResult(d);
+    } else if (d.async && d.task_id) {
+      currentTaskId = d.task_id;
+      pollTask(d.task_id);
+    } else {
+      log("响应异常: " + JSON.stringify(d));
+    }
+  } catch (e) {
+    toast("抓取出错: " + e.message, true);
+    log("错误: " + e.message, true);
+  } finally {
+    btn.disabled = false;
+    document.getElementById("btn-stop").disabled = true;
+  }
+}
+
+async function stopScrape() {
+  if (!currentTaskId) { toast("没有正在运行的任务", true); return; }
+  const stopBtn = document.getElementById("btn-stop");
+  stopBtn.disabled = true;
+  try {
+    const r = await fetch(API + "/api/stop/" + currentTaskId, { method: "POST" });
+    const d = await r.json();
+    if (d.ok) {
+      toast("已发送停止信号,等当前页完成后停止");
+      log("用户停止了任务,正在收尾...");
+    } else {
+      toast("停止失败: " + (d.error || "未知"), true);
+      stopBtn.disabled = false;
+    }
+  } catch (e) {
+    toast("停止请求失败: " + e.message, true);
+    stopBtn.disabled = false;
+  }
+}
+
+async function pollTask(taskId) {
+  for (let i = 0; i < 300; i++) {  // 最多 5 分钟
+    await sleep(2000);
+    try {
+      const r = await fetch(API + "/api/task/" + taskId);
+      const d = await r.json();
+      if (d.error) { toast(d.error, true); break; }
+      // 更新日志
+      if (d.logs && d.logs.length) {
+        setLog(d.logs.join("\n"));
+      }
+      updateProgress(d.progress || 0, d.logs ? d.logs[d.logs.length-1] : "");
+      if (d.status === "done") {
+        showResult(d);
+        break;
+      }
+      if (d.status === "error") {
+        toast("抓取失败: " + d.error, true);
+        log("错误: " + d.error, true);
+        break;
+      }
+    } catch (e) {
+      toast("查询任务失败: " + e.message, true);
+      break;
+    }
+  }
+}
+
+// -------- 显示结果 --------
+function showResult(d) {
+  showProgress(false);
+  currentTaskId = d.id || currentTaskId;
+  currentFilename = d.filename || currentFilename;
+
+  const rows = d.rows || [];
+  const yun = rows.filter(r => r.yun_links && r.yun_links.length > 0).length;
+
+  document.getElementById("result-summary").textContent =
+    `抓取完成: 共 ${rows.length} 条 | 含移动云盘 ${yun} 条`;
+  document.getElementById("result-panel").classList.add("show");
+
+  const preview = document.getElementById("result-preview");
+  preview.classList.add("show");
+  preview.textContent = d.txt || "(无结果)";
+
+  if (d.logs && d.logs.length) setLog(d.logs.join("\n"));
+}
+
+// -------- 下载 (fetch+blob 方案B,彻底修复 ERR_ABORTED) --------
+async function downloadBlob(url, filename) {
+  const btn = event ? event.target : null;
+  if (btn) btn.disabled = true;
+  try {
+    const r = await fetch(url);
+    if (!r.ok) { toast("下载失败: " + r.status, true); return; }
+    const blob = await r.blob();
+    const objUrl = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = objUrl;
+    a.download = filename;
+    a.style.display = "none";
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(objUrl);
+    }, 100);
+    toast("已下载: " + filename);
+  } catch (e) {
+    toast("下载出错: " + e.message, true);
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+function downloadTxt() {
+  if (!currentTaskId) { toast("请先抓取数据", true); return; }
+  downloadBlob(
+    API + "/api/download/" + currentTaskId + "?format=txt",
+    currentFilename + ".txt"
+  );
+}
+
+function downloadJson() {
+  if (!currentTaskId) { toast("请先抓取数据", true); return; }
+  downloadBlob(
+    API + "/api/download/" + currentTaskId + "?format=json",
+    currentFilename + ".json"
+  );
+}
+
+// -------- 复制 --------
+async function copyText() {
+  const txt = document.getElementById("result-preview").textContent;
+  if (!txt) { toast("无内容可复制", true); return; }
+  try {
+    await navigator.clipboard.writeText(txt);
+    toast("已复制到剪贴板");
+  } catch {
+    toast("复制失败,请手动选择复制", true);
+  }
+}
+
+// -------- 进度 & 日志 --------
+function showProgress(v) {
+  document.getElementById("progress-wrap").classList.toggle("show", v);
+}
+function updateProgress(pct, msg) {
+  document.getElementById("progress-fill").style.width = Math.round(pct * 100) + "%";
+  document.getElementById("progress-text").textContent = msg || (Math.round(pct*100) + "%");
+}
+function setLog(html) {
+  const el = document.getElementById("log-box");
+  el.classList.add("show");
+  el.innerHTML = html.split("\n").map(l =>
+    l.startsWith("[错误]") || l.startsWith("错误")
+      ? `<div class="err">${escHtml(l)}</div>`
+      : `<div>${escHtml(l)}</div>`
+  ).join("");
+  el.scrollTop = el.scrollHeight;
+}
+function log(msg, isErr) {
+  const el = document.getElementById("log-box");
+  el.classList.add("show");
+  el.innerHTML += isErr
+    ? `<div class="err">${escHtml(msg)}</div>`
+    : `<div>${escHtml(msg)}</div>`;
+  el.scrollTop = el.scrollHeight;
+}
+
+// -------- 清空 --------
+function clearResult() {
+  document.getElementById("result-panel").classList.remove("show");
+  document.getElementById("result-preview").classList.remove("show");
+  document.getElementById("log-box").classList.remove("show");
+  document.getElementById("log-box").innerHTML = "";
+  showProgress(false);
+  currentTaskId = null;
+}
+
+// -------- 工具 --------
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+function escHtml(s) {
+  return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+function toast(msg, isErr) {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.className = "toast show" + (isErr ? " error" : "");
+  setTimeout(() => el.classList.remove("show"), 3000);
+}
+</script>
+</body>
+</html>
