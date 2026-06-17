@@ -1,4 +1,4 @@
-﻿# Cloudflare Pages 部署指南 — ACG 游戏姬云端版
+# Cloudflare Pages 部署指南 — ACG 游戏姬云端版
 
 > 目标:把"单 HTML 版"部署到 Cloudflare Pages,搭配 GitHub Actions 每天自动抓 3 次(北京时间 8/13/20),**手机直接打开 URL 就能看最新数据**,电脑可以一直关着。
 
