@@ -1,9 +1,9 @@
-﻿{
+{
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "acg-pacong",
   "compatibility_date": "2026-06-17",
   "main": "src/index.js",
   "assets": {
-    "directory": "./单html版本"
+    "directory": "./\u5355html\u7248\u672c"
   }
 }
