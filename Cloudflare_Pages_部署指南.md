@@ -1,4 +1,4 @@
-# Cloudflare Pages 部署指南 — ACG 游戏姬云端版
+﻿# Cloudflare Pages 部署指南 — ACG 游戏姬云端版
 
 > 目标:把"单 HTML 版"部署到 Cloudflare Pages,搭配 GitHub Actions 每天自动抓 3 次(北京时间 8/13/20),**手机直接打开 URL 就能看最新数据**,电脑可以一直关着。
 
@@ -11,7 +11,7 @@
 │  GitHub Repository(项目代码)                              │
 │  ├─ .github/workflows/scrape.yml  ← 每天 3 次定时抓取    │
 │  ├─ 单html版本/                                        │
-│  │   ├─ acgyx.html              ← 手机访问的页面          │
+│  │   ├─ index.html              ← 手机访问的页面          │
 │  │   └─ data/acgyx_latest.json  ← 自动更新的最新数据     │
 │  └─ 电脑版/                  ← 电脑本地用(可不上 Pages)  │
 └────────┬─────────────────────────────────────────────────┘
@@ -205,7 +205,7 @@ schedule:
 
 ### 6.2 多设备同步访问历史
 - 在 Cloudflare Pages → **Analytics** 看访问量
-- 或加 Google Analytics(在 acgyx.html 的 `<head>` 加 GA 脚本)
+- 或加 Google Analytics(在 index.html 的 `<head>` 加 GA 脚本)
 
 ### 6.3 自动归档历史数据
 - 改 `.github/workflows/scrape.yml`,在 commit 前加:
@@ -242,7 +242,7 @@ schedule:
 
 | 文件 | 作用 | 部署时是否需要 |
 |------|------|----------------|
-| `单html版本/acgyx.html` | 手机访问的页面 | ✅ 必须 |
+| `单html版本/index.html` | 手机访问的页面 | ✅ 必须 |
 | `单html版本/data/acgyx_latest.json` | 数据 | ✅ 必须(Actions 自动更新) |
 | `.github/workflows/scrape.yml` | 定时抓取 | ✅ 必须 |
 | `电脑版/` | 电脑本地用 | ⚠️ 可选(带了能让 Actions 直接调 scraper.py) |
@@ -254,8 +254,8 @@ schedule:
 ## 9. 下次更新
 
 以后要改页面:
-1. 电脑改 `单html版本/acgyx.html`
-2. 测一下:`cd 单html版本; python -m http.server 8000`,手机扫码访问 `http://你电脑IP:8000/acgyx.html`
+1. 电脑改 `单html版本/index.html`
+2. 测一下:`cd 单html版本; python -m http.server 8000`,手机扫码访问 `http://你电脑IP:8000/index.html`
 3. 测试 OK 后 `git add . && git commit -m "xxx" && git push`
 4. Cloudflare 1-2 分钟自动部署完成,手机刷新就是新版本
 

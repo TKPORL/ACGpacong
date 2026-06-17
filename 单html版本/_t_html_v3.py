@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """第 3 遍:兼容性测试 - 多浏览器 + 多分辨率 + 长时间稳定性"""
 import os
 import time
@@ -35,7 +35,7 @@ def test_browser(browser_type, label, viewports, supports_mobile=True):
         page.on("pageerror", lambda e: js_errs.append(str(e)))
         page.on("console", lambda m: js_errs.append(f"console.{m.type}: {m.text}") if m.type == "error" else None)
 
-        URL = f"http://127.0.0.1:{PORT}/acgyx.html"
+        URL = f"http://127.0.0.1:{PORT}/index.html"
         t0 = time.time()
         page.goto(URL, wait_until="networkidle")
         page.wait_for_function("typeof CLOUD_DATA !== 'undefined' && CLOUD_DATA !== null", timeout=15000)
@@ -84,7 +84,7 @@ def test_refresh_robust(p, ctx):
     fails = []
     page = ctx.new_page()
     for i in range(5):
-        page.goto(f"http://127.0.0.1:{PORT}/acgyx.html?t={i}", wait_until="networkidle")
+        page.goto(f"http://127.0.0.1:{PORT}/index.html?t={i}", wait_until="networkidle")
         page.wait_for_function("typeof CLOUD_DATA !== 'undefined' && CLOUD_DATA !== null", timeout=10000)
         n = page.evaluate("CLOUD_ITEMS.length")
         print(f"  刷新 #{i+1}: items={n}")

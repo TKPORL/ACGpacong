@@ -1,10 +1,10 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 scraper.py - 命令行入口
 
 用途:
   1) 本地或 GitHub Actions 定时跑,把抓取结果写成 JSON
-  2) 输出的 JSON 给 acgyx.html 静态加载用
+  2) 输出的 JSON 给 index.html 静态加载用
 
 用法:
   python scraper.py --pages 3 --delay 0.8 --out ../data/acgyx_latest.json

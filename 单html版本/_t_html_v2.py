@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
-"""第 2 遍:Playwright 深度交互测试 acgyx.html"""
+﻿# -*- coding: utf-8 -*-
+"""第 2 遍:Playwright 深度交互测试 index.html"""
 import os
 import sys
 import json
@@ -24,7 +24,7 @@ def main():
     t.start()
     time.sleep(0.5)
 
-    URL = f"http://127.0.0.1:{PORT}/acgyx.html"
+    URL = f"http://127.0.0.1:{PORT}/index.html"
     fails = []
     errs = []
     with sync_playwright() as p:

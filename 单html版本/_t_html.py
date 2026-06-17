@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
-"""Playwright 测试 acgyx.html(改造后)"""
+﻿# -*- coding: utf-8 -*-
+"""Playwright 测试 index.html(改造后)"""
 import sys
 import json
 import threading
@@ -22,7 +22,7 @@ def main():
     t.start()
     import time; time.sleep(0.5)
 
-    URL = f"http://127.0.0.1:{PORT}/acgyx.html"
+    URL = f"http://127.0.0.1:{PORT}/index.html"
     with sync_playwright() as p:
         # 1) 桌面
         browser = p.chromium.launch()
