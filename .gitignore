@@ -13,8 +13,8 @@ venv/
 env/
 
 # 测试截图(临时)
-单html版本/_test_shot_*.png
-单html版本/_shot_*.png
+dist/_test_shot_*.png
+dist/_shot_*.png
 
 # 电脑版测试临时文件
 电脑版/_*.json
