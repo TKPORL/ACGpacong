@@ -29,6 +29,7 @@ from acgyx_scraper import (  # noqa: E402
     fetch_post_detail,
     filter_posts,
     get_total_pages,
+    resolve_base_url,
 )
 
 
@@ -41,6 +42,8 @@ def make_session():
 
 def scrape(pages: int, limit: int, delay: float):
     """抓首页 + N 页,抓详情,返回 dict(含 items / latest_date 等)"""
+    # 先探测可用域名
+    resolve_base_url()
     session = make_session()
     if pages <= 0:
         total = get_total_pages(session)
@@ -106,6 +109,30 @@ def main():
     data = scrape(args.pages, args.limit, args.delay)
 
     out_path = os.path.abspath(args.out)
+
+    # 如果本次抓到 0 条，保留上次有效数据（防止空数据覆盖）
+    if data["total"] == 0:
+        print(f"[scraper] 本次抓取 0 条，尝试保留旧数据 ...", flush=True)
+        if os.path.exists(out_path):
+            try:
+                with open(out_path, "r", encoding="utf-8") as f:
+                    old = json.load(f)
+                if old.get("total", 0) > 0:
+                    # 保留旧数据，只更新 generated_at
+                    old["generated_at"] = data["generated_at"]
+                    old["_note"] = f"本次抓取失败(0条)，保留旧数据(共{old['total']}条)"
+                    data = old
+                    print(f"[scraper] 已保留旧数据: {old['total']} 条", flush=True)
+                else:
+                    print(f"[scraper] 旧数据也是 0 条，不覆盖", flush=True)
+                    return  # 旧数据也是空的，不写入
+            except Exception as e:
+                print(f"[scraper] 读取旧数据失败: {e}，跳过写入", flush=True)
+                return
+        else:
+            print(f"[scraper] 无旧数据文件，跳过写入", flush=True)
+            return
+
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)

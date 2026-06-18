@@ -19,6 +19,11 @@ import requests
 from bs4 import BeautifulSoup
 
 BASE_URL = "https://acgyx.us"
+FALLBACK_URLS = [
+    "https://acgyxj.top",
+    "https://acgyxj.xyz",
+    "https://acgyxj.cc",
+]
 DEFAULT_HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -29,6 +34,45 @@ DEFAULT_HEADERS = {
     "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
     "Referer": "https://acgyx.us/",
 }
+
+# 运行时实际使用的 base_url，由 resolve_base_url() 设定
+_resolved_base_url: Optional[str] = None
+
+
+def _test_url(url: str, timeout: int = 10) -> bool:
+    """快速测试一个 URL 是否可达"""
+    try:
+        resp = requests.get(url, timeout=timeout, headers=DEFAULT_HEADERS, allow_redirects=True)
+        return resp.status_code < 400
+    except Exception:
+        return False
+
+
+def resolve_base_url() -> str:
+    """探测可用域名：先试主站，不行再试备用域名"""
+    global _resolved_base_url
+    if _resolved_base_url:
+        return _resolved_base_url
+    # 测试主站
+    if _test_url(BASE_URL):
+        _resolved_base_url = BASE_URL
+        return BASE_URL
+    print(f"[备用] 主站 {BASE_URL} 不可达，尝试备用域名 ...", file=sys.stderr)
+    for url in FALLBACK_URLS:
+        if _test_url(url):
+            _resolved_base_url = url
+            DEFAULT_HEADERS["Referer"] = url + "/"
+            print(f"[备用] 使用备用域名: {url}", file=sys.stderr)
+            return url
+    # 全部失败，返回主站（让后续请求自行报错）
+    _resolved_base_url = BASE_URL
+    print(f"[备用] 所有域名均不可达，使用主站 {BASE_URL}", file=sys.stderr)
+    return BASE_URL
+
+
+def get_base_url() -> str:
+    """获取当前可用的 base_url"""
+    return resolve_base_url()
 
 # 需要排除的分类(教程类)
 EXCLUDED_CATEGORIES = {"喵笔记"}
@@ -89,7 +133,8 @@ def in_date_range(pub_time: str,
 # --------------------- 抓取核心 ---------------------
 
 def fetch_list_page(page: int, session: requests.Session) -> List[Dict]:
-    url = BASE_URL + "/" if page == 1 else f"{BASE_URL}/page/{page}"
+    base = get_base_url()
+    url = base + "/" if page == 1 else f"{base}/page/{page}"
     html = http_get(url, session)
     if not html:
         return []
@@ -141,7 +186,7 @@ def fetch_list_page(page: int, session: requests.Session) -> List[Dict]:
 
 def get_total_pages(session: requests.Session, max_check: int = 50) -> int:
     """探测总页数:从首页找最大页码链接"""
-    html = http_get(BASE_URL + "/", session)
+    html = http_get(get_base_url() + "/", session)
     if not html:
         return 1
     pages = [int(p) for p in re.findall(r"/page/(\d+)", html) if p.isdigit()]
