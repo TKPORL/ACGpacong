@@ -263,32 +263,71 @@ SUFFIX_KEYWORDS = [
 
 def _split_name_suffix(text: str) -> Tuple[str, str]:
     """把去掉末尾方括号后的文本切成 (游戏名, 后缀)
-    边界:第一个匹配到的后缀关键字
-    - 关键字前是游戏名,关键字开始算后缀
-    - 找不到关键字,游戏名为空,后缀是整段
+    优先级:
+    1) SUFFIX_KEYWORDS 关键字(已有逻辑,长到短匹配,避免漏切 AI汉化版 / 存档等)
+    2) 智能切分:
+       - 第一段含中文 → 名称 = 第一段,后缀 = 后续所有含中文段(纯英文游戏名如 Strange Journey 跳过)
+       - 第一段不含中文(纯英文/日文/数字)→ 整段保留作为游戏名(用户规则:没中文就用其他语言)
     """
     if not text:
         return "", ""
+
+    # 1) 先找 SUFFIX_KEYWORDS
     for kw in sorted(SUFFIX_KEYWORDS, key=len, reverse=True):
         idx = text.find(kw)
         if idx > 0:  # 必须非开头(避免错误切分)
             return text[:idx].strip(), text[idx:].strip()
-    return "", text.strip()
+
+    # 2) 智能切分
+    parts = re.split(r"\s+", text.strip())
+    if not parts:
+        return "", text.strip()
+
+    # ★ 第一段不含中文(纯英文/日文/数字开头,如 Bunny and her Harem / AKB48 / アイドル之路)
+    # → 整段保留作为游戏名(用户规则:没中文就用其他语言,包括英文游戏名+中文标签都保留)
+    if not re.search(r"[\u4e00-\u9fff]", parts[0]):
+        return text.strip(), ""
+
+    # ★ 第一段含中文 → 名称 = 第一段,后缀 = 后续含中文段
+    # 纯英文段(如 Strange Journey)跳过,不保留(用户规则:有中文就用中文,英文游戏名去掉)
+    name_part = parts[0]
+    suffix_parts: List[str] = []
+    for p in parts[1:]:
+        if not p:
+            continue
+        if re.search(r"[\u4e00-\u9fff]", p):
+            suffix_parts.append(p)
+        # 纯英文段 → 跳过(英文游戏名丢掉)
+
+    return name_part.strip(), " ".join(suffix_parts).strip()
 
 
 def _extract_chinese_name(text: str) -> str:
-    """从游戏名段提取中文游戏名
-    规则:取前 2 个空格分词段,且每段必须含中文字符(避免吃下日文/英文段)
-    - 日文假名(平/片假名)出现 = 视为日文段,跳过
-    - 例:`痴汉愿望症候群 痴漢願望シンドローム` → `痴汉愿望症候群`
-    - 例:`敏感带培育SLG 梦魔的诅咒 性感帯育成SLG` → `敏感带培育SLG 梦魔的诅咒`
+    """从游戏名段提取游戏名
+    规则:
+    - 整段无中文 OR 第一段无中文(纯英文/日文/其他开头) → 名称是其他语言 → 整段保留
+    - 第一段有中文 → 名称有中文 → 提取前 2 个含中文段(跳过日文假名段)
+    - 例:`痴汉愿望症候群 痴漢願望シンドローム` → `痴汉愿望症候群`(第一段有中文,提中文段)
+    - 例:`Bunny and her Harem 画廊MOD+` → `Bunny and her Harem 画廊MOD+`(第一段无中文,整段保留)
     - 例:`樱姬6 Sakura Hime 6` → `樱姬6`
-    - 例:`修干嘛 二手3C店的暗营业` → `修干嘛 二手3C店的暗营业`
+    - 例:`AKB48 アイドル之路` → `AKB48 アイドル之路`(第一段无中文,整段保留)
     - 例:`被囚禁的莉莉 囚われのリリ` → `被囚禁的莉莉`
     """
     if not text:
         return ""
     parts = re.split(r"\s+", text.strip())
+    if not parts:
+        return text.strip()
+
+    # ★ 整段无中文字符 → 名称是其他语言 → 整段保留
+    if not re.search(r"[\u4e00-\u9fff]", text):
+        return text.strip()
+
+    # ★ 第一段无中文(纯英文/数字/日文开头)→ 名称是其他语言 → 整段保留
+    if not re.search(r"[\u4e00-\u9fff]", parts[0]):
+        return text.strip()
+
+    # 第一段有中文 → 提取前 2 个含中文段
     out: List[str] = []
     for p in parts:
         if not p:
@@ -296,7 +335,7 @@ def _extract_chinese_name(text: str) -> str:
         # 含日文假名(平 3040-309F,片 30A0-30FF)→ 视为日文段,跳过
         if re.search(r"[\u3040-\u309f\u30a0-\u30ff]", p):
             continue
-        # 段必须含中文字符(避免吃纯英文段)
+        # 段必须含中文字符
         if re.search(r"[\u4e00-\u9fff]", p):
             out.append(p)
             if len(out) >= 2:  # 最多取前 2 段
@@ -371,9 +410,11 @@ def simplify_title(title: str, category: str,
     if name_raw:
         name = _extract_chinese_name(name_raw)
     else:
-        name = ""
-        # 没切出后缀(整段都是"游戏名"),整段算"主内容",不强行加 -
-        suffix = t
+        # 没切出后缀段(整段都是"游戏名")→ 整段交给 _extract_chinese_name 智能处理
+        # - 第一段有中文 → 提中文段
+        # - 第一段无中文(纯英文/日文)→ 整段保留作为游戏名
+        name = _extract_chinese_name(t)
+        suffix = ""  # 整段都算游戏名,后缀为空,避免重复拼装
 
     # 9) 末尾标准化
     if category == "PC" and size_match:
@@ -404,7 +445,10 @@ def simplify_title(title: str, category: str,
     # 12) 拼装
     main_parts: List[str] = []
     if name and suffix:
-        main_parts.append(f"{name}-{suffix.rstrip()}")
+        # 去重边界处的 -(避免 name 末尾自带 - 时拼出 --)
+        sep_name = name.rstrip("-").rstrip()
+        sep_suffix = suffix.lstrip("-").lstrip()
+        main_parts.append(f"{sep_name}-{sep_suffix}")
     elif name:
         main_parts.append(name)
     elif suffix:

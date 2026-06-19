@@ -157,6 +157,26 @@
   button.yellow { background: var(--yellow); color: #000; }
   button.red { background: var(--red); color: #FFF; }
 
+  /* 细线胶囊按钮(作者官网链接用) */
+  .btn-outline {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 18px; border-radius: 999px;
+    background: transparent;
+    border: 1.5px solid var(--blue);
+    color: var(--blue);
+    font-size: 0.85rem; font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    cursor: pointer;
+  }
+  .btn-outline:hover {
+    background: var(--blue);
+    color: #FFF;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3);
+  }
+  .btn-outline:active { transform: translateY(0); }
+
   /* Tab 容器(筛选) */
   .mode-tabs { display: flex; gap: 4px; margin-bottom: 14px; padding: 4px; background: var(--input-bg); border-radius: var(--radius-pill); flex-wrap: wrap; }
   .mode-tabs button { flex: 1; background: transparent; color: var(--text-muted);
@@ -255,7 +275,7 @@
   </div>
 
   <!-- 筛选 / 浏览 -->
-  <div class="panel">
+  <div class="panel" style="position: relative; z-index: 10;">
     <div class="panel-title">② 筛选 / 浏览</div>
     <div class="mode-tabs" id="mode-tabs">
       <button class="active" data-mode="all" onclick="switchView('all')">全部</button>
@@ -324,7 +344,13 @@
   <!-- 页脚:作者信息 -->
   <div class="footer" style="text-align:center; padding: 24px 0 12px; color: var(--text-muted); font-size: 0.78rem;">
     <div>作者:<b style="color: var(--text);">Tsinho</b></div>
-    <div style="margin-top: 4px;">官网:<a href="https://link3.cc/Tsinho" target="_blank" style="color: var(--blue); text-decoration: none;">link3.cc/Tsinho</a></div>
+    <div style="margin-top: 12px;">
+      <a href="https://link3.cc/Tsinho" target="_blank" class="btn-outline">
+        <span>🔗</span>
+        <span>访问官网</span>
+        <span style="color: var(--text-muted); font-weight: 400; margin-left: 4px;">link3.cc/Tsinho</span>
+      </a>
+    </div>
   </div>
 </div>
 
