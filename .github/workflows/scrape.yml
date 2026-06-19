@@ -44,8 +44,8 @@ jobs:
       - name: 抓取并生成 JSON
         working-directory: 电脑版
         run: |
-          python scraper.py --pages 3 --delay 0.6 --out ../data/acgyx_latest.json
-          python scraper.py --pages 3 --delay 0.6 --out ../dist/data/acgyx_latest.json
+          python scraper.py --pages 8 --delay 0.6 --out ../data/acgyx_latest.json
+          python scraper.py --pages 8 --delay 0.6 --out ../dist/data/acgyx_latest.json
 
       - name: 提交并推送
         run: |

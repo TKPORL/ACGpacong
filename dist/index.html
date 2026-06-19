@@ -63,22 +63,6 @@
   .subtitle { text-align: center; color: var(--text-muted); font-size: 0.85rem; margin-bottom: 16px; }
 
   /* 主题切换按钮(液态玻璃) */
-  .theme-toggle {
-    position: absolute; right: 0; top: 50%; transform: translateY(-50%);
-    background: var(--card-glass);
-    backdrop-filter: saturate(180%) blur(20px);
-    -webkit-backdrop-filter: saturate(180%) blur(20px);
-    border: 0; border-radius: var(--radius-pill);
-    width: 44px; height: 44px; min-width: 44px; min-height: 44px;
-    color: var(--text); cursor: pointer; font-size: 18px;
-    display: flex; align-items: center; justify-content: center;
-    box-shadow: var(--shadow);
-    transition: transform 0.2s var(--ease-spring), box-shadow 0.2s var(--ease-spring);
-    padding: 0; font-family: inherit;
-  }
-  .theme-toggle:hover { box-shadow: var(--shadow-hover); }
-  .theme-toggle:active { transform: translateY(-50%) scale(0.94); }
-
   /* 最新提示条(液态玻璃) */
   .latest-bar {
     background: var(--card-glass);
@@ -139,15 +123,6 @@
   button.yellow { background: var(--yellow); color: #000; }
   button.red { background: var(--red); color: #FFF; }
 
-  /* Tab 容器(数据源) */
-  .source-tabs { display: flex; gap: 4px; margin-bottom: 14px; padding: 4px; background: var(--input-bg); border-radius: var(--radius-pill); }
-  .source-tabs button { flex: 1; background: transparent; color: var(--text-muted);
-    border: 0; border-radius: var(--radius-pill);
-    font-weight: 600; padding: 8px 10px; min-height: 36px; }
-  .source-tabs button.active { background: var(--card); color: var(--text);
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08); }
-  [data-theme="dark"] .source-tabs button.active { box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4); }
-
   /* Tab 容器(筛选) */
   .mode-tabs { display: flex; gap: 4px; margin-bottom: 14px; padding: 4px; background: var(--input-bg); border-radius: var(--radius-pill); flex-wrap: wrap; }
   .mode-tabs button { flex: 1; background: transparent; color: var(--text-muted);
@@ -167,12 +142,6 @@
   .status.warn { color: var(--yellow); background: transparent; padding: 0; }
 
   /* 日志 */
-  .log { font-size: 0.75rem; color: var(--text-muted); max-height: 160px; overflow-y: auto;
-    background: var(--input-bg); border: 0; border-radius: var(--radius-input);
-    padding: 10px 12px; margin-top: 10px;
-    font-family: ui-monospace, "SF Mono", Menlo, monospace; }
-  .log div { line-height: 1.5; }
-
   /* 结果区 */
   .results { background: var(--card); border: 0; border-radius: var(--radius-card);
     padding: 0; max-height: 56vh; overflow-y: auto; box-shadow: var(--shadow); }
@@ -195,9 +164,6 @@
   details summary { cursor: pointer; color: var(--blue); font-size: 0.8rem; font-weight: 500; }
 
   /* 进度条 */
-  .progress { height: 4px; background: rgba(120, 120, 128, 0.16); border-radius: var(--radius-pill); overflow: hidden; margin-top: 8px; }
-  .progress > div { height: 100%; background: var(--accent); width: 0%; transition: width 0.3s var(--ease-spring); border-radius: var(--radius-pill); }
-
   .help { font-size: 0.78rem; color: var(--text-muted); margin-top: 6px; line-height: 1.5; }
   code { background: var(--input-bg); padding: 2px 6px; border-radius: 6px;
     font-size: 0.78rem; color: var(--text); font-family: ui-monospace, "SF Mono", Menlo, monospace; }
@@ -229,11 +195,10 @@
   }
 </style>
 </head>
-<body>
+<body data-theme="dark">
 <div class="container">
   <div class="header-row">
     <h1>ACG游戏姬抓取工具</h1>
-    <button class="theme-toggle" id="theme-toggle" type="button" title="切换亮/暗模式" aria-label="切换主题">🌙</button>
   </div>
   <div class="subtitle">单 HTML 版 · 云端数据 · 手机直接打开</div>
 
@@ -243,65 +208,15 @@
     <div class="small">数据更新于 <span id="lb-time">--</span> · 共 <span id="lb-total">0</span> 条</div>
   </div>
 
-  <!-- 数据源 Tab -->
+  <!-- 数据源(已精简为只保留云端数据) -->
   <div class="panel">
-    <div class="panel-title">① 数据源</div>
-    <div class="source-tabs">
-      <button id="tab-cloud" class="active" onclick="switchSource('cloud')">📦 云端数据</button>
-      <button id="tab-proxy" onclick="switchSource('proxy')">🌐 代理抓取</button>
-      <button id="tab-paste" onclick="switchSource('paste')">📋 粘贴 HTML</button>
-    </div>
+    <div class="panel-title">① 数据源 · 云端</div>
 
-    <!-- ================== 云端数据源 ================== -->
     <div id="src-cloud">
       <div class="row">
         <button class="green" onclick="loadCloudData(true)">刷新数据</button>
         <span class="status" id="cloud-status" style="flex:1">就绪 · 首次进入将自动加载</span>
       </div>
-    </div>
-
-    <!-- ================== 代理抓取(保留为本地备用) ================== -->
-    <div id="src-proxy" class="hidden">
-      <div class="row">
-        <label>CORS代理</label>
-        <input id="proxy-url" type="text" value="https://api.allorigins.win/get?url=">
-      </div>
-      <div class="help">
-        <code>allorigins/get</code> 默认 · 备用:<code>https://api.codetabs.com/v1/proxy?quest=</code> · <code>https://corsproxy.io/?</code>
-      </div>
-      <div class="row">
-        <label>页数</label>
-        <input id="pages" type="number" value="3" min="1" max="20">
-        <label>条数</label>
-        <input id="limit" type="number" value="20" min="1" max="200">
-        <label>延时</label>
-        <input id="delay" type="number" value="0.6" min="0" max="5" step="0.1">
-      </div>
-      <div class="row">
-        <button class="green" onclick="previewDates()">探测最新</button>
-        <button onclick="startScrape()">开始抓取</button>
-        <button class="ghost" onclick="stopTask()">停止</button>
-      </div>
-      <div id="status" class="status">就绪</div>
-      <div class="progress"><div id="progress-bar"></div></div>
-      <div id="log" class="log"></div>
-    </div>
-
-    <!-- ================== 粘贴 HTML(保留为本地备用) ================== -->
-    <div id="src-paste" class="hidden">
-      <div class="row">
-        <label>页面</label>
-        <select id="paste-type">
-          <option value="list">列表页</option>
-          <option value="detail">详情页</option>
-        </select>
-      </div>
-      <textarea id="paste-html" placeholder="浏览器打开 acgyx.us → 右键 → 查看网页源代码 → 全选 → 粘贴"></textarea>
-      <div class="row" style="margin-top: 8px;">
-        <button class="green" onclick="pasteParse()">解析这段HTML</button>
-        <button class="ghost" onclick="document.getElementById('paste-html').value=''">清空</button>
-      </div>
-      <div class="help">列表页一次解析 1 页(20 篇),详情页一次解析 1 篇</div>
     </div>
   </div>
 
@@ -362,6 +277,12 @@
       </table>
     </div>
   </div>
+
+  <!-- 页脚:作者信息 -->
+  <div class="footer" style="text-align:center; padding: 24px 0 12px; color: var(--text-muted); font-size: 0.78rem;">
+    <div>作者:<b style="color: var(--text);">Tsinho</b></div>
+    <div style="margin-top: 4px;">官网:<a href="https://link3.cc/Tsinho" target="_blank" style="color: var(--blue); text-decoration: none;">link3.cc/Tsinho</a></div>
+  </div>
 </div>
 
 <script>
@@ -371,8 +292,6 @@
 let CLOUD_DATA = null;        // { generated_at, total, latest_date, latest_title, items: [] }
 let CLOUD_ITEMS = [];         // = CLOUD_DATA.items 的引用(便于过滤)
 let RESULTS = [];             // 用户当前看到/操作的结果(可能是过滤后)
-let IS_RUNNING = false;
-let STOP_FLAG = false;
 let LAST_FILENAME = "";
 
 let VIEW_MODE = "all";        // all / single / range / pages
@@ -385,8 +304,21 @@ const JSON_URLS = [
   "./acgyx_latest.json",
   "../data/acgyx_latest.json",
 ];
+// manifest + 按日期分文件路径
+const MANIFEST_URLS = [
+  "./data/manifest.json",
+  "./manifest.json",
+  "../data/manifest.json",
+];
+function dateFileUrls(date) {
+  return [
+    `./data/${date}.json`,
+    `./${date}.json`,
+    `../data/${date}.json`,
+  ];
+}
 
-// ==================== DOM 解析(原代理抓取 fallback) ====================
+// ==================== DOM 解析 ====================
 function parseHTML(html) {
   const doc = new DOMParser().parseFromString(html, "text/html");
   if (doc.querySelector("parsererror")) return null;
@@ -557,24 +489,11 @@ function renderTxt(rows) {
 
 // ==================== UI 辅助 ====================
 function $(id) { return document.getElementById(id); }
-function setStatus(msg, cls = "") {
-  const el = $("status");
-  el.className = "status" + (cls ? " " + cls : "");
-  el.textContent = msg;
-}
 function setCloudStatus(msg, cls = "") {
   const el = $("cloud-status");
   el.className = "status" + (cls ? " " + cls : "");
   el.textContent = msg;
 }
-function log(msg) {
-  const el = $("log");
-  const t = new Date().toTimeString().slice(0, 8);
-  const div = document.createElement("div");
-  div.textContent = `[${t}] ${msg}`;
-  el.appendChild(div); el.scrollTop = el.scrollHeight;
-}
-function setProgress(p) { $("progress-bar").style.width = `${Math.round(p * 100)}%`; }
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, c => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
@@ -599,36 +518,77 @@ function renderResults(rows) {
   });
 }
 
-// ==================== 数据源切换 ====================
-function switchSource(src) {
-  ["cloud", "proxy", "paste"].forEach(s => {
-    $(`tab-${s}`).classList.toggle("active", s === src);
-    $(`src-${s}`).classList.toggle("hidden", s !== src);
-  });
-}
-
 // ==================== 云端数据加载 ====================
-async function loadCloudData(manual) {
-  setCloudStatus("正在加载云端数据 ...", "");
-  for (const url of JSON_URLS) {
+async function tryFetchJSON(urls) {
+  for (const url of urls) {
     try {
       const r = await fetch(url, { cache: "no-store" });
       if (!r.ok) continue;
       const j = await r.json();
-      if (!j || !Array.isArray(j.items)) continue;
-      CLOUD_DATA = j;
-      CLOUD_ITEMS = j.items || [];
-      fillLatestBar();
-      fillDateSelectors();
-      switchView(VIEW_MODE);
-      setCloudStatus(`已加载 ${CLOUD_ITEMS.length} 条 (来源: ${url})`, "ok");
-      return;
-    } catch (e) {
-      // 试下一个
+      if (j) return { data: j, url };
+    } catch (e) { /* 试下一个 */ }
+  }
+  return null;
+}
+
+async function loadCloudData(manual) {
+  setCloudStatus("正在加载云端数据 ...", "");
+
+  // 1) 尝试读 manifest.json(日期索引,永久保留方案)
+  const manifestRes = await tryFetchJSON(MANIFEST_URLS);
+  const manifest = (manifestRes && Array.isArray(manifestRes.data)) ? manifestRes.data : [];
+
+  // 2) 如果有 manifest,按日期分文件拉(累积所有历史)
+  let historyItems = [];
+  if (manifest.length) {
+    const results = await Promise.all(manifest.map(async d => {
+      const res = await tryFetchJSON(dateFileUrls(d));
+      return (res && Array.isArray(res.data.items)) ? res.data.items : [];
+    }));
+    historyItems = results.flat();
+  }
+
+  // 3) 兜底:再读一次 acgyx_latest.json(主输出,兼容老版本)
+  const mainRes = await tryFetchJSON(JSON_URLS);
+  const mainData = (mainRes && Array.isArray(mainRes.data.items)) ? mainRes.data : null;
+
+  // 4) 合并:历史 ∪ 最新(按 url 去重)
+  const baseItems = historyItems.length ? historyItems : (mainData ? mainData.items : []);
+  if (!baseItems.length && !mainData) {
+    setCloudStatus("加载失败: 所有路径都打不开 JSON。" +
+      "可能原因:① 没联网 ② 还没跑过 scraper ③ 文件路径不对", "err");
+    return;
+  }
+  const seen = new Set();
+  const merged = [];
+  for (const it of baseItems) {
+    const u = it.url || "";
+    if (u && seen.has(u)) continue;
+    if (u) seen.add(u);
+    merged.push(it);
+  }
+  // 找出最新的日期 + 标题
+  let latest_date = "", latest_title = "";
+  for (const it of merged) {
+    const pt = it.pub_time || "";
+    if (pt && pt > latest_date) {
+      latest_date = pt;
+      latest_title = it.title || "";
     }
   }
-  setCloudStatus("加载失败: 所有路径都打不开 JSON。" +
-    "可能原因:① 没联网 ② 还没跑过 scraper ③ 文件路径不对", "err");
+  CLOUD_DATA = {
+    generated_at: (mainData && mainData.generated_at) || new Date().toISOString(),
+    total: merged.length,
+    latest_date: (mainData && mainData.latest_date) || latest_date,
+    latest_title: (mainData && mainData.latest_title) || latest_title,
+    items: merged,
+  };
+  CLOUD_ITEMS = merged;
+  fillLatestBar();
+  fillDateSelectors();
+  switchView(VIEW_MODE);
+  const daysLabel = manifest.length ? ` · 历史 ${manifest.length} 天` : "";
+  setCloudStatus(`已加载 ${CLOUD_ITEMS.length} 条${daysLabel} (来源: ${mainRes ? mainRes.url : "manifest 分文件"})`, "ok");
 }
 
 function fillLatestBar() {
@@ -705,128 +665,6 @@ function applyView() {
 function pagePrev() { if (CURRENT_PAGE > 1) { CURRENT_PAGE--; applyView(); } }
 function pageNext() { CURRENT_PAGE++; applyView(); }
 
-// ==================== 代理抓取(fallback) ====================
-async function fetchViaProxy(url) {
-  const base = $("proxy-url").value.trim();
-  if (!base) throw new Error("CORS 代理地址为空");
-  let sep = "";
-  if (base.includes("?url=") || base.includes("?quest=")) {
-    sep = base.includes("=") && base.endsWith("=") ? "" : "&url=";
-  } else if (base.includes("?")) sep = "&url="; else sep = "?url=";
-  const full = base + sep + encodeURIComponent(url);
-  const resp = await fetch(full);
-  if (!resp.ok) throw new Error(`代理返回 ${resp.status}`);
-  const text = await resp.text();
-  if (text.startsWith("{") && text.includes('"contents"')) {
-    try {
-      const obj = JSON.parse(text);
-      let c = obj.contents || "";
-      try { const d = atob(c); if (/[\u4e00-\u9fff]/.test(d)) c = d; } catch (_) {}
-      return c;
-    } catch (e) { throw new Error("代理 JSON 解析失败: " + e.message); }
-  }
-  return text;
-}
-
-async function previewDates() {
-  if (IS_RUNNING) return;
-  IS_RUNNING = true; STOP_FLAG = false;
-  setStatus("正在探测最新 ...", "");
-  $("log").innerHTML = ""; setProgress(0);
-  try {
-    log(`GET https://acgyx.us/`);
-    const html = await fetchViaProxy("https://acgyx.us/");
-    const posts = parseListHTML(html);
-    if (!posts.length) throw new Error("解析到 0 篇,可能被反爬或 HTML 结构变了");
-    posts.sort((a, b) => (b.pub_time || "").localeCompare(a.pub_time || ""));
-    setStatus(`最新: ${posts[0].pub_time} - ${posts[0].title}`, "ok");
-  } catch (e) {
-    setStatus(`失败: ${e.message}`, "err");
-    log("[错误] " + e.message);
-  } finally {
-    IS_RUNNING = false; setProgress(1);
-  }
-}
-
-async function startScrape() {
-  if (IS_RUNNING) return;
-  IS_RUNNING = true; STOP_FLAG = false; RESULTS = []; renderResults();
-  setStatus("开始抓取 ...", "");
-  $("log").innerHTML = ""; setProgress(0);
-  const pages = parseInt($("pages").value, 10) || 1;
-  const limit = parseInt($("limit").value, 10) || 0;
-  const delay = (parseFloat($("delay").value, 10) || 0) * 1000;
-  const EXCLUDE = new Set(["喵笔记"]);
-  const all = [];
-  for (let p = 1; p <= pages; p++) {
-    if (STOP_FLAG) { log("已停止"); break; }
-    const url = p === 1 ? "https://acgyx.us/" : `https://acgyx.us/page/${p}`;
-    log(`[列表] 第 ${p}/${pages} 页: ${url}`);
-    try {
-      const html = await fetchViaProxy(url);
-      const posts = parseListHTML(html);
-      log(`  解析 ${posts.length} 篇`);
-      all.push(...posts);
-    } catch (e) { log(`  [错误] ${e.message}`); }
-    setProgress((p / pages) * 0.3);
-    await sleep(delay + Math.random() * 300);
-  }
-  if (!all.length) { setStatus("列表抓取失败: 0 条", "err"); IS_RUNNING = false; return; }
-  const seen = new Set();
-  const filtered = all.filter(p => {
-    if (seen.has(p.url)) return false;
-    seen.add(p.url);
-    if (EXCLUDE.has(p.category)) return false;
-    return true;
-  }).slice(0, limit || all.length);
-  log(`筛选后: ${filtered.length} 条`);
-  const total = filtered.length;
-  for (let i = 0; i < total; i++) {
-    if (STOP_FLAG) { log("已停止"); break; }
-    const p = filtered[i];
-    log(`[详情 ${i + 1}/${total}] ${p.title.slice(0, 30)}`);
-    try {
-      const html = await fetchViaProxy(p.url);
-      const info = parseDetailHTML(html);
-      const newTitle = simplifyTitle(p.title, p.category || "", info.cheat_code || "", info.unzip_code || "");
-      RESULTS.push({ ...p, ...info, title: newTitle });
-    } catch (e) {
-      log(`  [错误] ${e.message}, 保留原标题`);
-      RESULTS.push({ ...p, yun_links: [], baidu_links: [], baidu_codes: [], cheat_code: "", unzip_code: "" });
-    }
-    setProgress(0.3 + (i + 1) / total * 0.7); renderResults();
-    if (i < total - 1) await sleep(delay + Math.random() * 300);
-  }
-  setStatus(`完成: 共 ${RESULTS.length} 条`, "ok"); setProgress(1);
-  IS_RUNNING = false;
-}
-function stopTask() { STOP_FLAG = true; log("正在停止 ..."); }
-
-// ==================== 粘贴 HTML ====================
-function pasteParse() {
-  const html = $("paste-html").value.trim();
-  if (!html) { alert("请先粘贴 HTML 源码"); return; }
-  const type = $("paste-type").value;
-  if (type === "list") {
-    const posts = parseListHTML(html);
-    if (!posts.length) { alert("解析到 0 篇"); return; }
-    posts.forEach(p => {
-      RESULTS.push({ ...p, yun_links: [], baidu_links: [], baidu_codes: [],
-        cheat_code: "", unzip_code: "",
-        title: simplifyTitle(p.title, p.category || "", "", "") });
-    });
-    renderResults(); alert(`已添加 ${posts.length} 条列表`);
-  } else {
-    const doc = parseHTML(html); if (!doc) { alert("HTML 解析失败"); return; }
-    const tEl = doc.querySelector("h1.entry-title, h1.post-title, h1");
-    const title = tEl ? tEl.textContent.trim() : "(未识别标题)";
-    const info = parseDetailHTML(html);
-    const newTitle = simplifyTitle(title, "", info.cheat_code, info.unzip_code);
-    RESULTS.push({ title: newTitle, category: "(详情页)", pub_time: new Date().toISOString().slice(0,10),
-      url: location.href, ...info });
-    renderResults(); alert(`已添加 1 条: ${newTitle}`);
-  }
-}
 
 // ==================== 导出 ====================
 function downloadBlob(content, filename, mime) {
@@ -880,40 +718,6 @@ $("vp-pages-size").addEventListener("change", () => { CURRENT_PAGE = 1; applyVie
 // ==================== 启动 ====================
 setCloudStatus("就绪 · 首次进入将自动加载", "");
 loadCloudData(false);
-
-// ==================== 主题切换(新增,不影响其他功能) ====================
-(function() {
-  const btn = document.getElementById('theme-toggle');
-  if (!btn) return;
-  const KEY = 'acg-theme';
-  const root = document.documentElement;
-  function setIcon(theme) {
-    btn.textContent = theme === 'dark' ? '☀️' : '🌙';
-    btn.title = '当前:' + (theme === 'dark' ? '暗色' : '亮色') + '模式(点击切换)';
-  }
-  // 初始:有用户选择 → 用选择;没有 → 跟随系统
-  let saved = localStorage.getItem(KEY);
-  if (saved !== 'light' && saved !== 'dark') {
-    saved = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-  }
-  root.setAttribute('data-theme', saved);
-  setIcon(saved);
-  // 点击切换
-  btn.addEventListener('click', () => {
-    const cur = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-    root.setAttribute('data-theme', cur);
-    localStorage.setItem(KEY, cur);
-    setIcon(cur);
-  });
-  // 跟随系统:用户从未手动选过时
-  if (!localStorage.getItem(KEY)) {
-    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
-      const t = e.matches ? 'dark' : 'light';
-      root.setAttribute('data-theme', t);
-      setIcon(t);
-    });
-  }
-})();
 </script>
 </body>
 </html>
