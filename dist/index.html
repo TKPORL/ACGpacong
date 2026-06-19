@@ -104,6 +104,40 @@
   input[type="text"] { flex: 1; min-width: 100px; }
   textarea { width: 100%; min-height: 100px; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 0.8rem; resize: vertical; }
 
+  /* 自定义下拉(替代 <select>,避免 Windows Chrome 展开后亮色面板) */
+  .dd { position: relative; display: inline-block; min-width: 130px; font-size: 0.9rem; }
+  .dd-trigger {
+    background: var(--input-bg); color: var(--text);
+    border: 0; border-radius: var(--radius-input);
+    padding: 10px 32px 10px 14px;
+    font-family: inherit; font-size: 0.9rem;
+    cursor: pointer; min-height: 44px;
+    width: 100%; text-align: left;
+    position: relative; outline: none;
+    transition: background 0.2s;
+  }
+  .dd-trigger::after {
+    content: "▾"; position: absolute; right: 12px; top: 50%;
+    transform: translateY(-50%); color: var(--text-muted); font-size: 0.75rem;
+  }
+  .dd-trigger:focus, .dd.open .dd-trigger { background: rgba(120,120,128,0.32); }
+  .dd-menu {
+    position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+    background: var(--card); border: 1px solid var(--text-soft);
+    border-radius: var(--radius-input);
+    max-height: 260px; overflow-y: auto;
+    list-style: none; margin: 0; padding: 4px 0;
+    z-index: 100; box-shadow: var(--shadow-hover);
+    display: none;
+  }
+  .dd.open .dd-menu { display: block; }
+  .dd-item {
+    padding: 10px 14px; cursor: pointer; color: var(--text);
+    font-size: 0.88rem; user-select: none;
+  }
+  .dd-item:hover { background: rgba(120,120,128,0.24); }
+  .dd-item.active { background: var(--accent); color: var(--accent-text); }
+
   /* 按钮:黑色胶囊(强调)+ 细线胶囊(次要) */
   button {
     background: var(--accent); color: var(--accent-text); border: 0;
@@ -235,15 +269,24 @@
 
     <div id="vp-single" class="row hidden">
       <label>日期</label>
-      <select id="vp-single-date"></select>
+      <div class="dd" id="vp-single-date" data-value="">
+        <button type="button" class="dd-trigger">--</button>
+        <ul class="dd-menu"></ul>
+      </div>
       <span class="status" style="flex:1">命中 <b id="cnt-single">0</b> 条</span>
     </div>
 
     <div id="vp-range" class="row hidden">
       <label>起</label>
-      <select id="vp-range-from"></select>
+      <div class="dd" id="vp-range-from" data-value="">
+        <button type="button" class="dd-trigger">--</button>
+        <ul class="dd-menu"></ul>
+      </div>
       <label>止</label>
-      <select id="vp-range-to"></select>
+      <div class="dd" id="vp-range-to" data-value="">
+        <button type="button" class="dd-trigger">--</button>
+        <ul class="dd-menu"></ul>
+      </div>
       <span class="status" style="flex:1">命中 <b id="cnt-range">0</b> 条</span>
     </div>
 
@@ -606,14 +649,55 @@ function fillDateSelectors() {
   const dates = Array.from(new Set(
     CLOUD_ITEMS.map(it => it.pub_time).filter(Boolean)
   )).sort().reverse();
-  const opts = dates.map(d => `<option value="${d}">${d}</option>`).join("");
-  $("vp-single-date").innerHTML = opts;
-  $("vp-range-from").innerHTML = opts;
-  $("vp-range-to").innerHTML = opts;
+  const itemsHtml = dates.map(d => `<li class="dd-item" data-value="${d}">${d}</li>`).join("");
+  const setDD = (id, val) => {
+    const dd = $(id);
+    if (!dd) return;
+    dd.querySelector(".dd-menu").innerHTML = itemsHtml;
+    dd.dataset.value = val;
+    dd.querySelector(".dd-trigger").textContent = val;
+    dd.querySelectorAll(".dd-item").forEach(it => {
+      it.classList.toggle("active", it.dataset.value === val);
+    });
+  };
   if (dates.length) {
-    $("vp-range-to").value = dates[0];
-    $("vp-range-from").value = dates[dates.length - 1] || dates[0];
+    setDD("vp-single-date", dates[0]);
+    setDD("vp-range-to", dates[0]);
+    setDD("vp-range-from", dates[dates.length - 1] || dates[0]);
   }
+}
+
+function setupDropdowns() {
+  // trigger 点击 -> 切换 open(关闭其他)
+  document.querySelectorAll(".dd .dd-trigger").forEach(trig => {
+    trig.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const dd = trig.parentElement;
+      const wasOpen = dd.classList.contains("open");
+      document.querySelectorAll(".dd.open").forEach(o => o.classList.remove("open"));
+      if (!wasOpen) dd.classList.add("open");
+    });
+  });
+  // item 点击 -> 选中 + 关闭 + 触发 change
+  document.querySelectorAll(".dd .dd-menu").forEach(menu => {
+    menu.addEventListener("click", (e) => {
+      const item = e.target.closest(".dd-item");
+      if (!item) return;
+      const dd = menu.parentElement;
+      const v = item.dataset.value;
+      dd.dataset.value = v;
+      dd.querySelector(".dd-trigger").textContent = item.textContent;
+      menu.querySelectorAll(".dd-item").forEach(it => {
+        it.classList.toggle("active", it === item);
+      });
+      dd.classList.remove("open");
+      dd.dispatchEvent(new Event("change"));
+    });
+  });
+  // 点击页面其他位置 -> 关闭
+  document.addEventListener("click", () => {
+    document.querySelectorAll(".dd.open").forEach(dd => dd.classList.remove("open"));
+  });
 }
 
 // ==================== 筛选 / 浏览 ====================
@@ -631,12 +715,12 @@ function applyView() {
   if (!CLOUD_DATA) { renderResults([]); return; }
   let items = CLOUD_ITEMS;
   if (VIEW_MODE === "single") {
-    const d = $("vp-single-date").value;
+    const d = $("vp-single-date").dataset.value;
     items = items.filter(it => it.pub_time === d);
     $("cnt-single").textContent = items.length;
   } else if (VIEW_MODE === "range") {
-    const from = $("vp-range-from").value;
-    const to = $("vp-range-to").value;
+    const from = $("vp-range-from").dataset.value;
+    const to = $("vp-range-to").dataset.value;
     const lo = from <= to ? from : to;
     const hi = from <= to ? to : from;
     items = items.filter(it => it.pub_time && it.pub_time >= lo && it.pub_time <= hi);
@@ -710,6 +794,7 @@ function clearResults() {
 }
 
 // ==================== 事件绑定 ====================
+setupDropdowns();
 $("vp-single-date").addEventListener("change", applyView);
 $("vp-range-from").addEventListener("change", applyView);
 $("vp-range-to").addEventListener("change", applyView);
