@@ -388,9 +388,10 @@ def simplify_title(title: str, category: str,
     if name_raw:
         name = _extract_chinese_name(name_raw)
     else:
-        name = ""
-        # 没切出后缀(整段都是"游戏名"),整段算"主内容",不强行加 -
-        suffix = t
+        # 没切出后缀关键字 → 整段交给 _extract_chinese_name 智能提取
+        # 有中文则提中文名，无中文则保留整段
+        name = _extract_chinese_name(t)
+        suffix = ""
 
     # 9) 末尾标准化
     if category == "PC" and size_match:
@@ -408,7 +409,9 @@ def simplify_title(title: str, category: str,
 
     # 10) 拼作弊码:原标题必须含"作弊码"字样
     if cheat_code and "作弊码" in (title or ""):
-        if "作弊码" in suffix:
+        if f"作弊码{cheat_code}" in suffix:
+            pass  # 作弊码已在标题中，无需重复添加
+        elif "作弊码" in suffix:
             suffix = suffix.replace("作弊码", f"作弊码{cheat_code}", 1)
         else:
             suffix = (suffix + "作弊码" + cheat_code) if suffix else ("作弊码" + cheat_code)
@@ -421,9 +424,9 @@ def simplify_title(title: str, category: str,
     # 12) 拼装
     main_parts: List[str] = []
     if name and suffix:
-        # 复合标签(含 - 或 +)用空格连接,简单标签用 - 连接
-        sep = " " if ("-" in suffix or "+" in suffix) else "-"
-        main_parts.append(f"{name}{sep}{suffix.rstrip()}")
+        # 复合标签(含 -)用空格连接避免 -- 歧义,简单标签用 - 连接
+        sep = " " if "-" in suffix else "-"
+        main_parts.append(f"{name.rstrip('-')}{sep}{suffix.rstrip()}")
     elif name:
         main_parts.append(name)
     elif suffix:
