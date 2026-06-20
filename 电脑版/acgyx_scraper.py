@@ -286,6 +286,7 @@ def _extract_chinese_name(text: str) -> str:
     规则:
     - 有中文:取前 2 个含中文字符的段(跳过日文假名段)
     - 没中文:保留英文游戏名,但去掉版本号段(Ver/Release/v/WIP 开头的段)
+    - 兜底:如果提取结果为空,返回原始文本
     """
     if not text:
         return ""

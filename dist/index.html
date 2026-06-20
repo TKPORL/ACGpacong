@@ -732,12 +732,20 @@ function applyView() {
   }
   // 过滤无移动云盘链接的帖子
   items = items.filter(it => (it.yun_links || []).length > 0);
-  // 按分类排序: PC 在前, AZ(PC+安卓) 在后, 其他最后
+  // 按分类排序: PC(无百度云) -> PC(有百度云) -> AZ(无百度云) -> AZ(有百度云) -> 其他
   items = [...items].sort((a, b) => {
     const catA = a.category || "";
     const catB = b.category || "";
-    const scoreA = catA === "PC" ? 0 : (catA === "AZ" ? 1 : 2);
-    const scoreB = catB === "PC" ? 0 : (catB === "AZ" ? 1 : 2);
+    const hasBaiDuA = (a.baidu_links || []).length > 0;
+    const hasBaiDuB = (b.baidu_links || []).length > 0;
+    const scoreA = catA === "PC" && !hasBaiDuA ? 0 :
+                   catA === "PC" ? 1 :
+                   catA === "AZ" && !hasBaiDuA ? 2 :
+                   catA === "AZ" ? 3 : 4;
+    const scoreB = catB === "PC" && !hasBaiDuB ? 0 :
+                   catB === "PC" ? 1 :
+                   catB === "AZ" && !hasBaiDuB ? 2 :
+                   catB === "AZ" ? 3 : 4;
     if (scoreA !== scoreB) return scoreA - scoreB;
     return (b.pub_time || "").localeCompare(a.pub_time || "");
   });

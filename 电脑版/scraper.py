@@ -90,10 +90,15 @@ def scrape(pages: int, limit: int, delay: float):
 
     # 过滤无移动云盘链接的帖子
     items = [it for it in items if (it.get("yun_links") or [])]
-    # 先按时间倒序,再按分类排序(稳定排序保持时间顺序)
+    # 先按时间倒序,再按排序规则(稳定排序保持时间顺序)
     items.sort(key=lambda it: it.get("pub_time", ""), reverse=True)
     items.sort(key=lambda it: (
-        0 if it.get("category") == "PC" else (1 if it.get("category") == "AZ" else 2)
+        # 排序规则: PC(无百度云) -> PC(有百度云) -> AZ(无百度云) -> AZ(有百度云) -> 其他
+        0 if it.get("category") == "PC" and not it.get("baidu_links") else
+        1 if it.get("category") == "PC" else
+        2 if it.get("category") == "AZ" and not it.get("baidu_links") else
+        3 if it.get("category") == "AZ" else
+        4
     ))
 
     return {
