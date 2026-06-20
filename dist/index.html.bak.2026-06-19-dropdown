@@ -104,40 +104,6 @@
   input[type="text"] { flex: 1; min-width: 100px; }
   textarea { width: 100%; min-height: 100px; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 0.8rem; resize: vertical; }
 
-  /* 自定义下拉(替代 <select>,避免 Windows Chrome 展开后亮色面板) */
-  .dd { position: relative; display: inline-block; min-width: 130px; font-size: 0.9rem; }
-  .dd-trigger {
-    background: var(--input-bg); color: var(--text);
-    border: 0; border-radius: var(--radius-input);
-    padding: 10px 32px 10px 14px;
-    font-family: inherit; font-size: 0.9rem;
-    cursor: pointer; min-height: 44px;
-    width: 100%; text-align: left;
-    position: relative; outline: none;
-    transition: background 0.2s;
-  }
-  .dd-trigger::after {
-    content: "▾"; position: absolute; right: 12px; top: 50%;
-    transform: translateY(-50%); color: var(--text-muted); font-size: 0.75rem;
-  }
-  .dd-trigger:focus, .dd.open .dd-trigger { background: rgba(120,120,128,0.32); }
-  .dd-menu {
-    position: absolute; top: calc(100% + 4px); left: 0; right: 0;
-    background: var(--card); border: 1px solid var(--text-soft);
-    border-radius: var(--radius-input);
-    max-height: 260px; overflow-y: auto;
-    list-style: none; margin: 0; padding: 4px 0;
-    z-index: 100; box-shadow: var(--shadow-hover);
-    display: none;
-  }
-  .dd.open .dd-menu { display: block; }
-  .dd-item {
-    padding: 10px 14px; cursor: pointer; color: var(--text);
-    font-size: 0.88rem; user-select: none;
-  }
-  .dd-item:hover { background: rgba(120,120,128,0.24); }
-  .dd-item.active { background: var(--accent); color: var(--accent-text); }
-
   /* 按钮:黑色胶囊(强调)+ 细线胶囊(次要) */
   button {
     background: var(--accent); color: var(--accent-text); border: 0;
@@ -255,11 +221,11 @@
   </div>
 
   <!-- 筛选 / 浏览 -->
-  <div class="panel" style="position: relative; z-index: 10;">
+  <div class="panel">
     <div class="panel-title">② 筛选 / 浏览</div>
     <div class="mode-tabs" id="mode-tabs">
-      <button data-mode="all" onclick="switchView('all')">全部</button>
-      <button class="active" data-mode="single" onclick="switchView('single')">单天</button>
+      <button class="active" data-mode="all" onclick="switchView('all')">全部</button>
+      <button data-mode="single" onclick="switchView('single')">单天</button>
       <button data-mode="range" onclick="switchView('range')">多天范围</button>
       <button data-mode="pages" onclick="switchView('pages')">指定页面</button>
     </div>
@@ -269,24 +235,15 @@
 
     <div id="vp-single" class="row hidden">
       <label>日期</label>
-      <div class="dd" id="vp-single-date" data-value="">
-        <button type="button" class="dd-trigger">--</button>
-        <ul class="dd-menu"></ul>
-      </div>
+      <select id="vp-single-date"></select>
       <span class="status" style="flex:1">命中 <b id="cnt-single">0</b> 条</span>
     </div>
 
     <div id="vp-range" class="row hidden">
       <label>起</label>
-      <div class="dd" id="vp-range-from" data-value="">
-        <button type="button" class="dd-trigger">--</button>
-        <ul class="dd-menu"></ul>
-      </div>
+      <select id="vp-range-from"></select>
       <label>止</label>
-      <div class="dd" id="vp-range-to" data-value="">
-        <button type="button" class="dd-trigger">--</button>
-        <ul class="dd-menu"></ul>
-      </div>
+      <select id="vp-range-to"></select>
       <span class="status" style="flex:1">命中 <b id="cnt-range">0</b> 条</span>
     </div>
 
@@ -337,7 +294,7 @@ let CLOUD_ITEMS = [];         // = CLOUD_DATA.items 的引用(便于过滤)
 let RESULTS = [];             // 用户当前看到/操作的结果(可能是过滤后)
 let LAST_FILENAME = "";
 
-let VIEW_MODE = "single";     // all / single / range / pages
+let VIEW_MODE = "all";        // all / single / range / pages
 let CURRENT_PAGE = 1;
 let PAGE_SIZE = 20;
 
@@ -649,55 +606,14 @@ function fillDateSelectors() {
   const dates = Array.from(new Set(
     CLOUD_ITEMS.map(it => it.pub_time).filter(Boolean)
   )).sort().reverse();
-  const itemsHtml = dates.map(d => `<li class="dd-item" data-value="${d}">${d}</li>`).join("");
-  const setDD = (id, val) => {
-    const dd = $(id);
-    if (!dd) return;
-    dd.querySelector(".dd-menu").innerHTML = itemsHtml;
-    dd.dataset.value = val;
-    dd.querySelector(".dd-trigger").textContent = val;
-    dd.querySelectorAll(".dd-item").forEach(it => {
-      it.classList.toggle("active", it.dataset.value === val);
-    });
-  };
+  const opts = dates.map(d => `<option value="${d}">${d}</option>`).join("");
+  $("vp-single-date").innerHTML = opts;
+  $("vp-range-from").innerHTML = opts;
+  $("vp-range-to").innerHTML = opts;
   if (dates.length) {
-    setDD("vp-single-date", dates[0]);
-    setDD("vp-range-to", dates[0]);
-    setDD("vp-range-from", dates[dates.length - 1] || dates[0]);
+    $("vp-range-to").value = dates[0];
+    $("vp-range-from").value = dates[dates.length - 1] || dates[0];
   }
-}
-
-function setupDropdowns() {
-  // trigger 点击 -> 切换 open(关闭其他)
-  document.querySelectorAll(".dd .dd-trigger").forEach(trig => {
-    trig.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const dd = trig.parentElement;
-      const wasOpen = dd.classList.contains("open");
-      document.querySelectorAll(".dd.open").forEach(o => o.classList.remove("open"));
-      if (!wasOpen) dd.classList.add("open");
-    });
-  });
-  // item 点击 -> 选中 + 关闭 + 触发 change
-  document.querySelectorAll(".dd .dd-menu").forEach(menu => {
-    menu.addEventListener("click", (e) => {
-      const item = e.target.closest(".dd-item");
-      if (!item) return;
-      const dd = menu.parentElement;
-      const v = item.dataset.value;
-      dd.dataset.value = v;
-      dd.querySelector(".dd-trigger").textContent = item.textContent;
-      menu.querySelectorAll(".dd-item").forEach(it => {
-        it.classList.toggle("active", it === item);
-      });
-      dd.classList.remove("open");
-      dd.dispatchEvent(new Event("change"));
-    });
-  });
-  // 点击页面其他位置 -> 关闭
-  document.addEventListener("click", () => {
-    document.querySelectorAll(".dd.open").forEach(dd => dd.classList.remove("open"));
-  });
 }
 
 // ==================== 筛选 / 浏览 ====================
@@ -715,12 +631,12 @@ function applyView() {
   if (!CLOUD_DATA) { renderResults([]); return; }
   let items = CLOUD_ITEMS;
   if (VIEW_MODE === "single") {
-    const d = $("vp-single-date").dataset.value;
+    const d = $("vp-single-date").value;
     items = items.filter(it => it.pub_time === d);
     $("cnt-single").textContent = items.length;
   } else if (VIEW_MODE === "range") {
-    const from = $("vp-range-from").dataset.value;
-    const to = $("vp-range-to").dataset.value;
+    const from = $("vp-range-from").value;
+    const to = $("vp-range-to").value;
     const lo = from <= to ? from : to;
     const hi = from <= to ? to : from;
     items = items.filter(it => it.pub_time && it.pub_time >= lo && it.pub_time <= hi);
@@ -730,17 +646,8 @@ function applyView() {
     PAGE_SIZE = Math.max(5, Math.min(100, PAGE_SIZE));
     $("vp-pages-cur").textContent = CURRENT_PAGE;
   }
-  // 过滤无移动云盘链接的帖子
-  items = items.filter(it => (it.yun_links || []).length > 0);
-  // 按分类排序: PC 在前, AZ(PC+安卓) 在后, 其他最后
-  items = [...items].sort((a, b) => {
-    const catA = a.category || "";
-    const catB = b.category || "";
-    const scoreA = catA === "PC" ? 0 : (catA === "AZ" ? 1 : 2);
-    const scoreB = catB === "PC" ? 0 : (catB === "AZ" ? 1 : 2);
-    if (scoreA !== scoreB) return scoreA - scoreB;
-    return (b.pub_time || "").localeCompare(a.pub_time || "");
-  });
+  // 默认按时间倒序
+  items = [...items].sort((a, b) => (b.pub_time || "").localeCompare(a.pub_time || ""));
   if (VIEW_MODE === "pages") {
     const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
     if (CURRENT_PAGE > totalPages) CURRENT_PAGE = totalPages;
@@ -762,49 +669,22 @@ function pageNext() { CURRENT_PAGE++; applyView(); }
 // ==================== 导出 ====================
 function downloadBlob(content, filename, mime) {
   const blob = new Blob([content], { type: mime });
-  const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.style.display = "none";
-  document.body.appendChild(a);
-  try {
-    const event = new MouseEvent("click", {
-      bubbles: true,
-      cancelable: true,
-      view: window
-    });
-    a.dispatchEvent(event);
-  } catch (e) {
-    a.click();
-  }
-  setTimeout(() => {
-    URL.revokeObjectURL(url);
-    a.remove();
-  }, 100);
+  a.href = URL.createObjectURL(blob); a.download = filename;
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 100);
 }
 function downloadTxt() {
   if (!RESULTS.length) { alert("没有结果可下载"); return; }
   downloadBlob(renderTxt(RESULTS),
-    `acgyx_${getCurrentDateLabel()}.txt`,
+    `acgyx_${new Date().toISOString().slice(0,10).replace(/-/g,"")}.txt`,
     "text/plain;charset=utf-8");
 }
 function downloadJson() {
   if (!RESULTS.length) { alert("没有结果可下载"); return; }
   downloadBlob(JSON.stringify(RESULTS, null, 2),
-    `acgyx_${getCurrentDateLabel()}.json`,
+    `acgyx_${new Date().toISOString().slice(0,10).replace(/-/g,"")}.json`,
     "application/json;charset=utf-8");
-}
-function getCurrentDateLabel() {
-  if (VIEW_MODE === "single") {
-    return $("vp-single-date").dataset.value.replace(/-/g, "");
-  } else if (VIEW_MODE === "range") {
-    const from = $("vp-range-from").dataset.value.replace(/-/g, "");
-    const to = $("vp-range-to").dataset.value.replace(/-/g, "");
-    return from === to ? from : `${from}_${to}`;
-  } else {
-    return new Date().toISOString().slice(0,10).replace(/-/g,"");
-  }
 }
 function copyTxt() {
   if (!RESULTS.length) { alert("没有结果"); return; }
@@ -830,7 +710,6 @@ function clearResults() {
 }
 
 // ==================== 事件绑定 ====================
-setupDropdowns();
 $("vp-single-date").addEventListener("change", applyView);
 $("vp-range-from").addEventListener("change", applyView);
 $("vp-range-to").addEventListener("change", applyView);

@@ -88,6 +88,14 @@ def scrape(pages: int, limit: int, delay: float):
         if i < len(posts):
             time.sleep(delay)
 
+    # 过滤无移动云盘链接的帖子
+    items = [it for it in items if (it.get("yun_links") or [])]
+    # 先按时间倒序,再按分类排序(稳定排序保持时间顺序)
+    items.sort(key=lambda it: it.get("pub_time", ""), reverse=True)
+    items.sort(key=lambda it: (
+        0 if it.get("category") == "PC" else (1 if it.get("category") == "AZ" else 2)
+    ))
+
     return {
         "generated_at": datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds"),
         "total": len(items),

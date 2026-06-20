@@ -18,12 +18,11 @@ from typing import Dict, List, Optional, Tuple
 import requests
 from bs4 import BeautifulSoup
 
-BASE_URL = "https://acgyxj.top"
+BASE_URL = "https://acgyx.us"
 FALLBACK_URLS = [
-    "https://acgyxj.cc",
+    "https://acgyxj.top",
     "https://acgyxj.xyz",
-    "https://acgus.top",
-    "https://acgyx.us",
+    "https://acgyxj.cc",
 ]
 DEFAULT_HEADERS = {
     "User-Agent": (
@@ -40,13 +39,10 @@ DEFAULT_HEADERS = {
 _resolved_base_url: Optional[str] = None
 
 
-import urllib3
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
 def _test_url(url: str, timeout: int = 10) -> bool:
     """快速测试一个 URL 是否可达"""
     try:
-        resp = requests.get(url, timeout=timeout, headers=DEFAULT_HEADERS, allow_redirects=True, verify=False)
+        resp = requests.get(url, timeout=timeout, headers=DEFAULT_HEADERS, allow_redirects=True)
         return resp.status_code < 400
     except Exception:
         return False
@@ -88,7 +84,7 @@ def http_get(url: str, session: requests.Session, retries: int = 3,
              timeout: int = 20) -> Optional[str]:
     for i in range(retries):
         try:
-            resp = session.get(url, timeout=timeout, headers=DEFAULT_HEADERS, verify=False)
+            resp = session.get(url, timeout=timeout, headers=DEFAULT_HEADERS)
             resp.raise_for_status()
             resp.encoding = resp.apparent_encoding or "utf-8"
             return resp.text
@@ -256,13 +252,12 @@ def parse_links(html: str) -> Dict[str, object]:
 
 # 后缀关键字(长->短优先匹配)
 SUFFIX_KEYWORDS = [
-    "内嵌AI汉化版", "内嵌汉化版", "内嵌版", "内嵌AI汉化",
-    "AI汉化版", "AI汉化补丁", "AI汉化",
+    "内嵌AI汉化版", "内嵌汉化版", "内嵌版",
+    "AI汉化版", "AI汉化补丁",
     "汉化版", "汉化补丁", "汉化补丁版",
     "官中步兵版", "官中赞助版", "官中版",
     "赞助版", "步兵版",
     "作弊码", "存档",
-    "画廊MOD",
 ]
 
 
@@ -282,42 +277,31 @@ def _split_name_suffix(text: str) -> Tuple[str, str]:
 
 
 def _extract_chinese_name(text: str) -> str:
-    """从游戏名段提取游戏名
-    规则:
-    - 有中文:取前 2 个含中文字符的段(跳过日文假名段)
-    - 没中文:保留英文游戏名,但去掉版本号段(Ver/Release/v/WIP 开头的段)
+    """从游戏名段提取中文游戏名
+    规则:取前 2 个空格分词段,且每段必须含中文字符(避免吃下日文/英文段)
+    - 日文假名(平/片假名)出现 = 视为日文段,跳过
+    - 例:`痴汉愿望症候群 痴漢願望シンドローム` → `痴汉愿望症候群`
+    - 例:`敏感带培育SLG 梦魔的诅咒 性感帯育成SLG` → `敏感带培育SLG 梦魔的诅咒`
+    - 例:`樱姬6 Sakura Hime 6` → `樱姬6`
+    - 例:`修干嘛 二手3C店的暗营业` → `修干嘛 二手3C店的暗营业`
+    - 例:`被囚禁的莉莉 囚われのリリ` → `被囚禁的莉莉`
     """
     if not text:
         return ""
     parts = re.split(r"\s+", text.strip())
-
-    # 检查整段是否有中文
-    has_chinese = bool(re.search(r"[\u4e00-\u9fff]", text))
-
-    if has_chinese:
-        # 有中文:提取含中文的段
-        out: List[str] = []
-        for p in parts:
-            if not p:
-                continue
-            if re.search(r"[\u3040-\u309f\u30a0-\u30ff]", p):
-                continue
-            if re.search(r"[\u4e00-\u9fff]", p):
-                out.append(p)
-                if len(out) >= 2:
-                    break
-        return " ".join(out) if out else text.strip()
-    else:
-        # 没中文:保留英文游戏名,去掉版本号段
-        out: List[str] = []
-        for p in parts:
-            if not p:
-                continue
-            # 跳过版本号段(Ver/Release/v/WIP/Ep. 开头)
-            if re.match(r"^(Ver|Release|v|WIP|Ep\.)", p, re.IGNORECASE):
-                continue
+    out: List[str] = []
+    for p in parts:
+        if not p:
+            continue
+        # 含日文假名(平 3040-309F,片 30A0-30FF)→ 视为日文段,跳过
+        if re.search(r"[\u3040-\u309f\u30a0-\u30ff]", p):
+            continue
+        # 段必须含中文字符(避免吃纯英文段)
+        if re.search(r"[\u4e00-\u9fff]", p):
             out.append(p)
-        return " ".join(out) if out else text.strip()
+            if len(out) >= 2:  # 最多取前 2 段
+                break
+    return " ".join(out) if out else text.strip()
 
 
 def simplify_title(title: str, category: str,
@@ -420,9 +404,7 @@ def simplify_title(title: str, category: str,
     # 12) 拼装
     main_parts: List[str] = []
     if name and suffix:
-        # 复合标签(含 - 或 +)用空格连接,简单标签用 - 连接
-        sep = " " if ("-" in suffix or "+" in suffix) else "-"
-        main_parts.append(f"{name}{sep}{suffix.rstrip()}")
+        main_parts.append(f"{name}-{suffix.rstrip()}")
     elif name:
         main_parts.append(name)
     elif suffix:

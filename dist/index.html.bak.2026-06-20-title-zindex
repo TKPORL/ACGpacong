@@ -255,11 +255,11 @@
   </div>
 
   <!-- 筛选 / 浏览 -->
-  <div class="panel" style="position: relative; z-index: 10;">
+  <div class="panel">
     <div class="panel-title">② 筛选 / 浏览</div>
     <div class="mode-tabs" id="mode-tabs">
-      <button data-mode="all" onclick="switchView('all')">全部</button>
-      <button class="active" data-mode="single" onclick="switchView('single')">单天</button>
+      <button class="active" data-mode="all" onclick="switchView('all')">全部</button>
+      <button data-mode="single" onclick="switchView('single')">单天</button>
       <button data-mode="range" onclick="switchView('range')">多天范围</button>
       <button data-mode="pages" onclick="switchView('pages')">指定页面</button>
     </div>
@@ -337,7 +337,7 @@ let CLOUD_ITEMS = [];         // = CLOUD_DATA.items 的引用(便于过滤)
 let RESULTS = [];             // 用户当前看到/操作的结果(可能是过滤后)
 let LAST_FILENAME = "";
 
-let VIEW_MODE = "single";     // all / single / range / pages
+let VIEW_MODE = "all";        // all / single / range / pages
 let CURRENT_PAGE = 1;
 let PAGE_SIZE = 20;
 
@@ -730,17 +730,8 @@ function applyView() {
     PAGE_SIZE = Math.max(5, Math.min(100, PAGE_SIZE));
     $("vp-pages-cur").textContent = CURRENT_PAGE;
   }
-  // 过滤无移动云盘链接的帖子
-  items = items.filter(it => (it.yun_links || []).length > 0);
-  // 按分类排序: PC 在前, AZ(PC+安卓) 在后, 其他最后
-  items = [...items].sort((a, b) => {
-    const catA = a.category || "";
-    const catB = b.category || "";
-    const scoreA = catA === "PC" ? 0 : (catA === "AZ" ? 1 : 2);
-    const scoreB = catB === "PC" ? 0 : (catB === "AZ" ? 1 : 2);
-    if (scoreA !== scoreB) return scoreA - scoreB;
-    return (b.pub_time || "").localeCompare(a.pub_time || "");
-  });
+  // 默认按时间倒序
+  items = [...items].sort((a, b) => (b.pub_time || "").localeCompare(a.pub_time || ""));
   if (VIEW_MODE === "pages") {
     const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
     if (CURRENT_PAGE > totalPages) CURRENT_PAGE = totalPages;
@@ -762,49 +753,22 @@ function pageNext() { CURRENT_PAGE++; applyView(); }
 // ==================== 导出 ====================
 function downloadBlob(content, filename, mime) {
   const blob = new Blob([content], { type: mime });
-  const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.style.display = "none";
-  document.body.appendChild(a);
-  try {
-    const event = new MouseEvent("click", {
-      bubbles: true,
-      cancelable: true,
-      view: window
-    });
-    a.dispatchEvent(event);
-  } catch (e) {
-    a.click();
-  }
-  setTimeout(() => {
-    URL.revokeObjectURL(url);
-    a.remove();
-  }, 100);
+  a.href = URL.createObjectURL(blob); a.download = filename;
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 100);
 }
 function downloadTxt() {
   if (!RESULTS.length) { alert("没有结果可下载"); return; }
   downloadBlob(renderTxt(RESULTS),
-    `acgyx_${getCurrentDateLabel()}.txt`,
+    `acgyx_${new Date().toISOString().slice(0,10).replace(/-/g,"")}.txt`,
     "text/plain;charset=utf-8");
 }
 function downloadJson() {
   if (!RESULTS.length) { alert("没有结果可下载"); return; }
   downloadBlob(JSON.stringify(RESULTS, null, 2),
-    `acgyx_${getCurrentDateLabel()}.json`,
+    `acgyx_${new Date().toISOString().slice(0,10).replace(/-/g,"")}.json`,
     "application/json;charset=utf-8");
-}
-function getCurrentDateLabel() {
-  if (VIEW_MODE === "single") {
-    return $("vp-single-date").dataset.value.replace(/-/g, "");
-  } else if (VIEW_MODE === "range") {
-    const from = $("vp-range-from").dataset.value.replace(/-/g, "");
-    const to = $("vp-range-to").dataset.value.replace(/-/g, "");
-    return from === to ? from : `${from}_${to}`;
-  } else {
-    return new Date().toISOString().slice(0,10).replace(/-/g,"");
-  }
 }
 function copyTxt() {
   if (!RESULTS.length) { alert("没有结果"); return; }
