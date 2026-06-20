@@ -178,6 +178,8 @@ def main():
                 print(f"  [by-date] 读取 {date} 旧数据失败: {e}", flush=True)
 
         # 按 url 去重合并
+        # 旧数据可能来自旧版本(未做云盘过滤),合并前先过滤无云盘链接的帖子
+        old_items = [it for it in old_items if (it.get("yun_links") or [])]
         seen = {}
         for it in old_items:
             u = it.get("url", "")
