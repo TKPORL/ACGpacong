@@ -4,7 +4,7 @@ on:
   # 北京时间 8:00 / 13:00 / 20:00 → UTC 0:00 / 5:00 / 12:00
   schedule:
     - cron: "0 0,5,12 * * *"
-  workflow_dispatch:        # 手动触发,便于测试
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -41,10 +41,19 @@ jobs:
         working-directory: 电脑版
         run: python scraper.py --pages 8 --delay 0.6 --out ../data/acgyx_latest.json
 
+      - name: 重试抓取(如果失败)
+        if: failure()
+        working-directory: 电脑版
+        run: |
+          echo "首次抓取失败,等待30秒后重试..."
+          sleep 30
+          python scraper.py --pages 8 --delay 0.6 --out ../data/acgyx_latest.json
+
       - name: 同步到 dist
         run: cp data/acgyx_latest.json dist/data/acgyx_latest.json
 
       - name: 提交并推送
+        if: success()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
