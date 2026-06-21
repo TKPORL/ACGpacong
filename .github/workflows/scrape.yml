@@ -5,10 +5,6 @@ on:
   schedule:
     - cron: "0 0,5,12 * * *"
   workflow_dispatch:        # 手动触发,便于测试
-  push:
-    paths:
-      - "电脑版/**"
-      - ".github/workflows/scrape.yml"
 
 permissions:
   contents: write
@@ -43,9 +39,10 @@ jobs:
 
       - name: 抓取并生成 JSON
         working-directory: 电脑版
-        run: |
-          python scraper.py --pages 8 --delay 0.6 --out ../data/acgyx_latest.json
-          python scraper.py --pages 8 --delay 0.6 --out ../dist/data/acgyx_latest.json
+        run: python scraper.py --pages 8 --delay 0.6 --out ../data/acgyx_latest.json
+
+      - name: 同步到 dist
+        run: cp data/acgyx_latest.json dist/data/acgyx_latest.json
 
       - name: 提交并推送
         run: |

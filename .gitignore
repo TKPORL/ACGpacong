@@ -38,4 +38,8 @@ desktop.ini
 # 杂项
 *.log
 *.bak
+*.bak.*
 *.tmp
+title_analysis.txt
+test_*.txt
+_scraper_run_*.log

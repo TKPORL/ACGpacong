@@ -88,19 +88,6 @@ def scrape(pages: int, limit: int, delay: float):
         if i < len(posts):
             time.sleep(delay)
 
-    # 过滤无移动云盘链接的帖子
-    items = [it for it in items if (it.get("yun_links") or [])]
-    # 先按时间倒序,再按排序规则(稳定排序保持时间顺序)
-    items.sort(key=lambda it: it.get("pub_time", ""), reverse=True)
-    items.sort(key=lambda it: (
-        # 排序规则: PC(无百度云) -> PC(有百度云) -> AZ(无百度云) -> AZ(有百度云) -> 其他
-        0 if it.get("category") == "PC" and not it.get("baidu_links") else
-        1 if it.get("category") == "PC" else
-        2 if it.get("category") == "AZ" and not it.get("baidu_links") else
-        3 if it.get("category") == "AZ" else
-        4
-    ))
-
     return {
         "generated_at": datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds"),
         "total": len(items),
@@ -116,19 +103,16 @@ def main():
     parser.add_argument("--limit", type=int, default=0, help="最多抓多少条详情(0=不限)")
     parser.add_argument("--delay", type=float, default=0.6, help="请求间隔(秒)")
     parser.add_argument("--out", default="../data/acgyx_latest.json", help="输出 JSON 路径")
-    parser.add_argument("--data-dir", default=None, help="按日期分文件存储的目录(默认同 out 的父目录)")
     args = parser.parse_args()
 
     print(f"[scraper] start pages={args.pages} limit={args.limit} delay={args.delay}", flush=True)
     data = scrape(args.pages, args.limit, args.delay)
 
     out_path = os.path.abspath(args.out)
-    data_dir = os.path.abspath(args.data_dir) if args.data_dir else os.path.dirname(out_path)
-    data_dir_name = os.path.basename(data_dir)
 
     # 如果本次抓到 0 条，保留上次有效数据（防止空数据覆盖）
     if data["total"] == 0:
-        print(f"[scraper] 本次抓取 0 条，保留旧数据 ...", flush=True)
+        print("[scraper] 本次抓取 0 条，保留旧数据 ...", flush=True)
         if os.path.exists(out_path):
             try:
                 with open(out_path, "r", encoding="utf-8") as f:
@@ -139,92 +123,21 @@ def main():
                     data = old
                     print(f"[scraper] 已保留旧数据: {old['total']} 条", flush=True)
                 else:
-                    print(f"[scraper] 旧数据也是 0 条，不覆盖", flush=True)
+                    print("[scraper] 旧数据也是 0 条，不覆盖", flush=True)
                     return
             except Exception as e:
                 print(f"[scraper] 读取旧数据失败: {e}，跳过写入", flush=True)
                 return
         else:
-            print(f"[scraper] 无旧数据文件，跳过写入", flush=True)
+            print("[scraper] 无旧数据文件，跳过写入", flush=True)
             return
 
-    os.makedirs(os.path.dirname(out_path), exist_ok=True)
-    os.makedirs(data_dir, exist_ok=True)
-
-    # 1) 写 acgyx_latest.json(主输出,兼容旧版前端)
+    out_dir = os.path.dirname(out_path)
+    if out_dir:
+        os.makedirs(out_dir, exist_ok=True)
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
     print(f"[scraper] wrote {out_path}  ({data['total']} items, latest={data['latest_date']})", flush=True)
-
-    # 2) 按 pub_time 分日期写 data/YYYY-MM-DD.json(永久保留,旧文件追加新数据)
-    by_date = {}
-    for item in data["items"]:
-        pt = item.get("pub_time", "")
-        if not pt:
-            continue
-        date = pt[:10]  # 2026-06-19
-        by_date.setdefault(date, []).append(item)
-
-    manifest = []
-    for date, new_items in by_date.items():
-        day_path = os.path.join(data_dir, f"{date}.json")
-        old_items = []
-        if os.path.exists(day_path):
-            try:
-                with open(day_path, "r", encoding="utf-8") as f:
-                    old = json.load(f)
-                    old_items = old.get("items", [])
-            except Exception as e:
-                print(f"  [by-date] 读取 {date} 旧数据失败: {e}", flush=True)
-
-        # 按 url 去重合并
-        # 旧数据可能来自旧版本(未做云盘过滤),合并前先过滤无云盘链接的帖子
-        old_items = [it for it in old_items if (it.get("yun_links") or [])]
-        seen = {}
-        for it in old_items:
-            u = it.get("url", "")
-            if u:
-                seen[u] = it
-        added = 0
-        for it in new_items:
-            u = it.get("url", "")
-            if u and u not in seen:
-                added += 1
-            if u:
-                seen[u] = it
-        merged = list(seen.values())
-
-        day_data = {
-            "generated_at": data["generated_at"],
-            "total": len(merged),
-            "date": date,
-            "items": merged,
-        }
-        with open(day_path, "w", encoding="utf-8") as f:
-            json.dump(day_data, f, ensure_ascii=False, indent=2)
-        print(f"  [by-date] {date}.json: {len(merged)} 条 (本次新增 {added})", flush=True)
-
-        if date not in manifest:
-            manifest.append(date)
-
-    # 3) 写 manifest.json(日期索引,前端按日期 tab 切换用)
-    manifest_path = os.path.join(data_dir, "manifest.json")
-    old_manifest = []
-    if os.path.exists(manifest_path):
-        try:
-            with open(manifest_path, "r", encoding="utf-8") as f:
-                old_manifest = json.load(f)
-        except Exception:
-            old_manifest = []
-    # 合并 + 去重 + 倒序
-    for d in old_manifest:
-        if d not in manifest:
-            manifest.append(d)
-    manifest.sort(reverse=True)
-
-    with open(manifest_path, "w", encoding="utf-8") as f:
-        json.dump(manifest, f, ensure_ascii=False, indent=2)
-    print(f"[scraper] wrote {manifest_path}  ({len(manifest)} dates)", flush=True)
 
 
 if __name__ == "__main__":

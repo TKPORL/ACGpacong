@@ -2,4 +2,3 @@ requests>=2.32
 beautifulsoup4>=4.12
 lxml>=4.9
 openpyxl>=3.1
-flask>=3.0
