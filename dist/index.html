@@ -347,19 +347,6 @@ const JSON_URLS = [
   "./acgyx_latest.json",
   "../data/acgyx_latest.json",
 ];
-// manifest + 按日期分文件路径
-const MANIFEST_URLS = [
-  "./data/manifest.json",
-  "./manifest.json",
-  "../data/manifest.json",
-];
-function dateFileUrls(date) {
-  return [
-    `./data/${date}.json`,
-    `./${date}.json`,
-    `../data/${date}.json`,
-  ];
-}
 
 // ==================== DOM 解析 ====================
 function parseHTML(html) {
@@ -577,61 +564,20 @@ async function tryFetchJSON(urls) {
 async function loadCloudData(manual) {
   setCloudStatus("正在加载云端数据 ...", "");
 
-  // 1) 尝试读 manifest.json(日期索引,永久保留方案)
-  const manifestRes = await tryFetchJSON(MANIFEST_URLS);
-  const manifest = (manifestRes && Array.isArray(manifestRes.data)) ? manifestRes.data : [];
-
-  // 2) 如果有 manifest,按日期分文件拉(累积所有历史)
-  let historyItems = [];
-  if (manifest.length) {
-    const results = await Promise.all(manifest.map(async d => {
-      const res = await tryFetchJSON(dateFileUrls(d));
-      return (res && Array.isArray(res.data.items)) ? res.data.items : [];
-    }));
-    historyItems = results.flat();
-  }
-
-  // 3) 兜底:再读一次 acgyx_latest.json(主输出,兼容老版本)
   const mainRes = await tryFetchJSON(JSON_URLS);
   const mainData = (mainRes && Array.isArray(mainRes.data.items)) ? mainRes.data : null;
 
-  // 4) 合并:历史 ∪ 最新(按 url 去重)
-  const baseItems = historyItems.length ? historyItems : (mainData ? mainData.items : []);
-  if (!baseItems.length && !mainData) {
+  if (!mainData) {
     setCloudStatus("加载失败: 所有路径都打不开 JSON。" +
       "可能原因:① 没联网 ② 还没跑过 scraper ③ 文件路径不对", "err");
     return;
   }
-  const seen = new Set();
-  const merged = [];
-  for (const it of baseItems) {
-    const u = it.url || "";
-    if (u && seen.has(u)) continue;
-    if (u) seen.add(u);
-    merged.push(it);
-  }
-  // 找出最新的日期 + 标题
-  let latest_date = "", latest_title = "";
-  for (const it of merged) {
-    const pt = it.pub_time || "";
-    if (pt && pt > latest_date) {
-      latest_date = pt;
-      latest_title = it.title || "";
-    }
-  }
-  CLOUD_DATA = {
-    generated_at: (mainData && mainData.generated_at) || new Date().toISOString(),
-    total: merged.length,
-    latest_date: (mainData && mainData.latest_date) || latest_date,
-    latest_title: (mainData && mainData.latest_title) || latest_title,
-    items: merged,
-  };
-  CLOUD_ITEMS = merged;
+  CLOUD_DATA = mainData;
+  CLOUD_ITEMS = mainData.items || [];
   fillLatestBar();
   fillDateSelectors();
   switchView(VIEW_MODE);
-  const daysLabel = manifest.length ? ` · 历史 ${manifest.length} 天` : "";
-  setCloudStatus(`已加载 ${CLOUD_ITEMS.length} 条${daysLabel} (来源: ${mainRes ? mainRes.url : "manifest 分文件"})`, "ok");
+  setCloudStatus(`已加载 ${CLOUD_ITEMS.length} 条 (来源: ${mainRes.url})`, "ok");
 }
 
 function fillLatestBar() {

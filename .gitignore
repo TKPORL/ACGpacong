@@ -43,3 +43,9 @@ desktop.ini
 title_analysis.txt
 test_*.txt
 _scraper_run_*.log
+
+# 分日期数据文件(不再使用)
+data/202*.json
+dist/data/202*.json
+data/manifest.json
+dist/data/manifest.json
