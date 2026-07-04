@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-04T07:46:59+00:00",
+  "generated_at": "2026-07-04T13:21:56+00:00",
   "total": 160,
   "latest_date": "2026-07-04",
   "latest_title": "足球-官中版 [PC 6.10G]",
@@ -344,9 +344,15 @@
       "category": "PC",
       "url": "https://acgyx.us/41116.html",
       "pub_time": "2026-07-04",
-      "yun_links": [],
-      "baidu_links": [],
-      "baidu_codes": [],
+      "yun_links": [
+        "https://yun.139.com/shareweb/#/w/i/2w2KLQrmTKnat"
+      ],
+      "baidu_links": [
+        "https://pan.baidu.com/s/1yyZKy38IBwkfNDgxszejQg?pwd=w79d"
+      ],
+      "baidu_codes": [
+        "w79d"
+      ],
       "cheat_code": "",
       "unzip_code": ""
     },
