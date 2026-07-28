@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-27T14:28:15+00:00",
+  "generated_at": "2026-07-28T02:23:37+00:00",
   "total": 160,
   "latest_date": "2026-07-27",
   "latest_title": "眼神冰冷的黑濑小姐，只对我言听计从-官中版+自带全回想 [PC 1.90G]",
@@ -441,7 +441,9 @@
       "baidu_links": [
         "https://pan.baidu.com/s/1xS1mtuu7eeqApIHQCmZXsw?pwd=fbr1"
       ],
-      "baidu_codes": [],
+      "baidu_codes": [
+        "fbr1"
+      ],
       "cheat_code": "",
       "unzip_code": ""
     },
@@ -2898,6 +2900,5 @@
       "cheat_code": "",
       "unzip_code": ""
     }
-  ],
-  "_note": "本次抓取失败(0条)，保留旧数据(共160条)"
+  ]
 }
