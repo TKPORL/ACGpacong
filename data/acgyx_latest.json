@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-06T04:51:54+00:00",
+  "generated_at": "2026-10-06T11:47:50+00:00",
   "total": 80,
   "latest_date": "2026-10-06",
   "latest_title": "全新 极速发射 [PC 70M]",
@@ -578,7 +578,10 @@
         "https://pan.baidu.com/s/1o_Ls37IOAtf8d1D98qMg2Q?pwd=1568",
         "https://pan.baidu.com/s/1XoOyd2H_vMpsj4zpgLFAgw?pwd=8d49"
       ],
-      "baidu_codes": [],
+      "baidu_codes": [
+        "1568",
+        "8d49"
+      ],
       "cheat_code": "",
       "unzip_code": ""
     },
