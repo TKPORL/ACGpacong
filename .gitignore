@@ -49,3 +49,10 @@ data/202*.json
 dist/data/202*.json
 data/manifest.json
 dist/data/manifest.json
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+.env*
+!.env.example
